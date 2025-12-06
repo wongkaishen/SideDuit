@@ -111,7 +111,7 @@ const LoginForm: React.FC<LoginFormProps> = () => {
               <p className="mt-2 text-center text-sm text-gray-600">
                 Or new user? {' '}
                 <a 
-                  href="#" 
+                  href="/register" 
                   className="font-medium text-indigo-600 hover:text-indigo-500"
                 >
                  Sign Up here
