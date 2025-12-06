@@ -1,128 +1,106 @@
-"use client"; // <-- ADD THIS LINE
-import Head from 'next/head';
-import React, { FormEvent } from 'react';
+"use client";
 
-// Define the component's props interface (optional for simple components, but good practice)
-interface LoginFormProps {}
+import React from 'react';
+import { FinancialDashboard } from '@/components/ui/financial-dashboard';
 
-// Define the component using the React.FC (Function Component) type
-const LoginForm: React.FC<LoginFormProps> = () => {
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    // TODO: Add your login logic here (e.g., API call, state management)
-    console.log('Login form submitted!'); 
-    alert('Login attempt initiated for Duitsidwe!'); 
-  };
+// Import Lucide icons for the demo
+import {
+  ArrowLeftRight,
+  CreditCard,
+  Landmark,
+  LineChart,
+  ShieldCheck,
+  SwitchCamera,
+  Target,
+  TrendingUp,
+  Users,
+} from 'lucide-react';
 
+// --- Fallback Icon for Logo ---
+const LogoIcon = ({
+  letter,
+  className,
+}: {
+  letter: string;
+  className?: string;
+}) => (
+  <div
+    className={`w-9 h-9 flex items-center justify-center rounded-full font-bold text-white text-sm ${className}`}
+  >
+    {letter}
+  </div>
+);
+
+// --- DEMO DATA ---
+const quickActionsData = [
+  { icon: ArrowLeftRight, title: 'Transfer', description: 'Send Money' },
+  { icon: Landmark, title: 'Pay', description: 'Bills & Payments' },
+  { icon: TrendingUp, title: 'Invest', description: 'Grow Wealth' },
+  { icon: CreditCard, title: 'Cards', description: 'Manage Cards' },
+];
+
+const recentActivityData = [
+  {
+    icon: <LogoIcon letter="N" className="bg-red-600" />,
+    title: 'Netflix Subscription',
+    time: '2 hours ago',
+    amount: -15.99,
+  },
+  {
+    icon: <LogoIcon letter="S" className="bg-green-500" />,
+    title: 'Salary Deposit',
+    time: '1 day ago',
+    amount: 3450.0,
+  },
+  {
+    icon: LineChart,
+    title: 'Investment Transfer',
+    time: '2 days ago',
+    amount: -500.0,
+  },
+];
+
+const financialServicesData = [
+  {
+    icon: ShieldCheck,
+    title: 'Wealth Management',
+    description: 'Investment portfolios & advisory',
+    isPremium: true,
+  },
+  {
+    icon: Target,
+    title: 'Savings Goals',
+    description: 'Set & track financial goals',
+    hasAction: true,
+  },
+  {
+    icon: SwitchCamera,
+    title: 'Cash Flow',
+    description: 'Income & expense analysis',
+  },
+  {
+    icon: Users,
+    title: 'Joint Accounts',
+    description: 'Family & business accounts',
+  },
+];
+
+const summaryData = {
+  totalIncome: 5450.00,
+  totalExpenses: 2315.99,
+  estimatedTaxes: 1245.00,
+}
+
+// --- DEMO COMPONENT ---
+export default function FinancialDashboardDemo() {
   return (
-    <>
-      <Head>
-        {/* Link to Inter font from Google Fonts */}
-        <link 
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" 
-          rel="stylesheet"
-        />
-      </Head>
-      
-      <div style={{background:"#00ff7f"}} className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <h1 className="text-center text-4xl font-extrabold text-gray-900 tracking-tight">
-            SideDuit
-          </h1>
-          <h2 className="mt-6 text-center text-3xl font-bold text-gray-700">
-            Sign in to your account
-          </h2>
-        </div>
-
-        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-white py-8 px-4 shadow-xl sm:rounded-lg sm:px-10">
-            {/* The onSubmit handler is strongly typed as a FormEvent */}
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div>
-                <label 
-                  htmlFor="email" 
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Email address
-                </label>
-                <div className="mt-1">
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label 
-                  htmlFor="password" 
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Password
-                </label>
-                <div className="mt-1">
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                    Remember me
-                  </label>
-                </div>
-
-                <div className="text-sm">
-                  <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500">
-                    Forgot your password?
-                  </a>
-                </div>
-              </div>
-
-              <div>
-                <button
-                  type="submit"
-                  style={{background : '#00002a'}}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Sign in
-                </button>
-              </div>
-            </form>
-
-            <div className="mt-6">
-              <p className="mt-2 text-center text-sm text-gray-600">
-                Or new user? {' '}
-                <a 
-                  href="#" 
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
-                >
-                 Sign Up here
-                </a>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
+    <div className="bg-background min-h-screen p-4 md:p-8 pt-20 md:pt-24">
+      <FinancialDashboard
+        quickActions={quickActionsData}
+        recentActivity={recentActivityData}
+        financialServices={financialServicesData}
+        summary={summaryData}
+      />
+    </div>
   );
-};
-
-export default LoginForm;
+}
