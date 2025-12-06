@@ -115,7 +115,7 @@ export default function RetirementPage() {
 
                 {/* Header */}
                 <div>
-                    <h1 className="text-3xl font-bold text-primary">Retirement Planner</h1>
+                    <h1 className="text-3xl font-bold text-[#059669]">Retirement Planner</h1>
                     <p className="text-muted-foreground">Visualize your EPF growth and plan for a secure future.</p>
                 </div>
 
@@ -182,7 +182,7 @@ export default function RetirementPage() {
 
                         <div className="pt-4 border-t">
                             <p className="text-sm text-muted-foreground">Projected Savings at {retirementAge}</p>
-                            <p className="text-3xl font-bold text-primary">RM {finalAmount.toLocaleString()}</p>
+                            <p className="text-3xl font-bold text-[#059669]">RM {finalAmount.toLocaleString()}</p>
                         </div>
                     </div>
 
@@ -266,7 +266,7 @@ export default function RetirementPage() {
                                     </p>
                                     <button
                                         onClick={() => handleSendMessage(true)}
-                                        className="bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2"
+                                        className="bg-[#059669] text-primary-foreground px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2"
                                     >
                                         <Sparkles className="w-4 h-4" />
                                         Generate Analysis
@@ -284,7 +284,7 @@ export default function RetirementPage() {
                                                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                             >
                                                 <div className={`max-w-[85%] p-3 rounded-lg ${msg.role === 'user'
-                                                    ? 'bg-primary text-primary-foreground'
+                                                    ? 'bg-[#059669] text-primary-foreground'
                                                     : 'bg-muted/50 border border-white/10'
                                                     }`}>
                                                     <div className="prose prose-invert prose-sm max-w-none">
@@ -311,13 +311,13 @@ export default function RetirementPage() {
                                             onChange={(e) => setInputMessage(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                                             placeholder="Ask a follow-up question..."
-                                            className="flex-1 bg-background border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                                            className="flex-1 bg-background border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#059669]"
                                             disabled={isLoadingAi}
                                         />
                                         <button
                                             onClick={() => handleSendMessage()}
                                             disabled={!inputMessage.trim() || isLoadingAi}
-                                            className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="bg-[#059669] text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             Send
                                         </button>
