@@ -34,7 +34,7 @@ const InputGroup = ({ label, value, onChange, min, max, step = 1, prefix = "", s
     <div className="space-y-3">
         <div className="flex justify-between items-center">
             <label className="text-sm font-medium text-foreground/90">{label}</label>
-            <span className="text-sm font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+            <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
                 {prefix}{typeof value === 'number' ? value.toLocaleString() : value}{suffix}
             </span>
         </div>
@@ -45,7 +45,10 @@ const InputGroup = ({ label, value, onChange, min, max, step = 1, prefix = "", s
             step={step}
             value={value}
             onChange={(e) => onChange(Number(e.target.value))}
-            className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/90 transition-all"
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-600 transition-all"
+            style={{
+                background: `linear-gradient(to right, #10b981 0%, #10b981 ${((value - min) / (max - min)) * 100}%, #e5e7eb ${((value - min) / (max - min)) * 100}%, #e5e7eb 100%)`
+            }}
         />
         {tooltip && <p className="text-xs text-muted-foreground">{tooltip}</p>}
     </div>
@@ -164,7 +167,7 @@ export default function RetirementPage() {
                                 setMonthlyContribution(500);
                                 setInterestRate(5.5);
                             }}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground bg-secondary/50 hover:bg-secondary rounded-lg transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors shadow-sm"
                         >
                             <RefreshCw className="w-4 h-4" />
                             Reset
@@ -351,7 +354,7 @@ export default function RetirementPage() {
                                             setMessages([]);
                                             setIsChatStarted(false);
                                         }}
-                                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                        className="text-xs text-gray-500 hover:text-gray-700 bg-white hover:bg-gray-100 px-2 py-1 rounded border border-gray-200 transition-colors"
                                     >
                                         Reset Chat
                                     </button>
