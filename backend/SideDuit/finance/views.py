@@ -11,6 +11,34 @@ import json
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from .utils import FinancialCalculator
+from datetime import datetime
+import sys
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def root_view(request):
+    """
+    Root endpoint - Backend health check.
+    Returns system information and status.
+    """
+    return Response({
+        'status': 'success',
+        'message': 'Backend is running perfectly! 🚀',
+        'service': 'SideDuit Financial API',
+        'version': '1.0.0',
+        'timestamp': datetime.now().isoformat(),
+        'python_version': f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+        'endpoints': {
+            'dashboard': '/finance/api/dashboard/',
+            'upload': '/finance/upload/',
+            'chat': '/finance/api/chat/',
+            'conversations': '/finance/api/conversations/',
+            'retirement_advisor': '/finance/retirement-advisor/',
+            'all_transactions': '/finance/api/all-transactions/',
+        },
+        'documentation': 'https://github.com/wongkaishen/SideDuit',
+    })
 
 
 @csrf_exempt
