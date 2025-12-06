@@ -115,7 +115,7 @@ export default function TransferPage() {
                     <div className="w-full max-w-sm text-center z-10">
                         <p className="text-white/60 text-sm mb-2 font-medium">Enter Amount</p>
                         <div className="relative flex items-center justify-center mb-8">
-                            <span className="text-4xl font-bold text-[#00ff7f] mr-2">$</span>
+                            <span className="text-4xl font-bold text-[#00ff7f] mr-2">RM</span>
                             <input
                                 type="number"
                                 placeholder="0"
@@ -127,7 +127,7 @@ export default function TransferPage() {
                         <div className="grid grid-cols-3 gap-2 mb-8">
                             {[10, 50, 100].map(amt => (
                                 <button key={amt} className="py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-sm font-medium">
-                                    +${amt}
+                                    +RM {amt}
                                 </button>
                             ))}
                         </div>

@@ -2,8 +2,6 @@
 
 import React from 'react';
 import { FinancialDashboard } from '@/components/ui/financial-dashboard';
-import { TextEffect } from '@/components/ui/text-effect';
-import { ChatBot } from '@/components/ui/chatbot';
 
 // Import Lucide icons for the demo
 import {
@@ -46,27 +44,33 @@ const quickActionsData = [
 const recentActivityData = [
   {
     icon: FileText,
-    title: 'Grab Earnings (OCR)',
+    title: 'Upwork Freelance Payout',
     time: 'Processed 5 mins ago',
-    amount: 142.50,
+    amount: 850.00,
   },
   {
     icon: Zap,
-    title: 'Electric Bill',
+    title: 'AWS Server Hosting',
     time: 'Yesterday, 8:30 PM',
     amount: -84.20,
   },
   {
-    icon: <LogoIcon letter="N" className="bg-red-600" />,
-    title: 'Netflix Subscription',
+    icon: <LogoIcon letter="A" className="bg-[#FF0000]" />, // Adobe Red
+    title: 'Adobe Creative Cloud',
     time: '2 hours ago',
-    amount: -15.99,
+    amount: -54.99,
   },
   {
-    icon: <LogoIcon letter="S" className="bg-green-500" />,
-    title: 'Salary Deposit',
+    icon: <LogoIcon letter="G" className="bg-[#00b14f]" />,
+    title: 'Grab Driver Cashout',
     time: '1 day ago',
-    amount: 3450.0,
+    amount: 120.50,
+  },
+  {
+    icon: <LogoIcon letter="C" className="bg-blue-600" />,
+    title: 'Consulting Invoice #402',
+    time: '2 days ago',
+    amount: 2500.00,
   },
 ];
 
@@ -106,22 +110,12 @@ const summaryData = {
 export default function FinancialDashboardDemo() {
   return (
     <div className="bg-background min-h-screen p-4 md:p-8 pt-20 md:pt-24 flex flex-col items-center">
-      <div className="mb-8 text-center">
-        <TextEffect
-          per='char'
-          preset='fade'
-          className="text-sm font-medium tracking-widest text-[#00001c] uppercase"
-        >
-          AI Powered Financial Tracker
-        </TextEffect>
-      </div>
       <FinancialDashboard
         quickActions={quickActionsData}
         recentActivity={recentActivityData}
         financialServices={financialServicesData}
         summary={summaryData}
       />
-      <ChatBot />
     </div>
   );
 }

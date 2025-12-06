@@ -10,6 +10,7 @@ import {
     Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { GaugeChart } from './gauge-chart';
 
 // --- TYPE DEFINITIONS ---
 type QuickAction = {
@@ -123,7 +124,7 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                 ease: "power2.out",
                 onUpdate: () => {
                     if (isCurrency) {
-                        el.innerText = '$' + obj.value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                        el.innerText = 'RM ' + obj.value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                     } else {
                         el.innerText = Math.floor(obj.value).toString();
                     }
@@ -131,7 +132,7 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                 onComplete: () => {
                     // Ensure final formatted value with decimals if needed
                     if (isCurrency) {
-                        el.innerText = '$' + finalValue.toLocaleString();
+                        el.innerText = 'RM ' + finalValue.toLocaleString();
                     }
                 }
             });
@@ -169,24 +170,19 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
             className="w-full max-w-7xl mx-auto font-sans perspective-1000" // Added perspective context
         >
             <div className="py-4 md:py-6">
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="dashboard-item p-4 rounded-xl bg-green-500/10 border border-green-500/20">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Income</p>
-                        <p className="text-xl font-bold text-green-600 mt-1 scramble-num" data-value={summary.totalIncome} data-currency="true">$0</p>
-                    </div>
-                    <div className="dashboard-item p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Expenses</p>
-                        <p className="text-xl font-bold text-red-600 mt-1 scramble-num" data-value={summary.totalExpenses} data-currency="true">$0</p>
-                    </div>
-                    <div className="dashboard-item p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Taxes (Est.)</p>
-                        <p className="text-xl font-bold text-blue-600 mt-1 scramble-num" data-value={summary.estimatedTaxes} data-currency="true">$0</p>
+                {/* Header Section: Greeting & AI Badge */}
+                <div className="flex flex-col items-center justify-center mb-8 text-center animate-in fade-in slide-in-from-top-10 duration-700">
+                    <h1 className="text-4xl md:text-5xl font-bold text-[#00001c] mb-3">
+                        Good evening, Alex
+                    </h1>
+                    <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-[#00ff7f]/10 border border-[#00ff7f]/20">
+                        <Sparkles className="w-3 h-3 text-[#00b14f] mr-2" />
+                        <span className="text-xs font-bold text-[#00b14f] tracking-widest uppercase">AI Powered</span>
                     </div>
                 </div>
 
-                {/* AI Hero Input */}
-                <div className="dashboard-item relative mb-8 flex justify-center z-20">
+                {/* AI Hero Input - Centered & Focused */}
+                <div className="dashboard-item relative mb-12 flex justify-center z-20">
                     <div className="relative w-full max-w-2xl group">
                         <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-full opacity-25 blur-lg"></div>
                         <div className="relative flex items-center bg-white backdrop-blur-xl border border-white/20 rounded-full shadow-[0_0_50px_rgba(255,255,255,0.2)] transition-all duration-500 h-16 px-6">
@@ -208,7 +204,7 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                                 )}
                                 id="ai-placeholder"
                             >
-                                Ask SideDuit: 'How much can I spend?'
+                                What financial insight do you need today?
                             </div>
                             <kbd className="hidden sm:inline-flex items-center justify-center h-8 px-3 text-xs font-mono text-[#00001c]/40 bg-black/5 rounded-full border border-black/10 ml-4">
                                 ⌘ K
@@ -216,6 +212,50 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                         </div>
                     </div>
                 </div>
+
+                {/* Core Metrics & Gig Health Score */}
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-12">
+                    {/* Income */}
+                    <div className="dashboard-item lg:col-span-1 p-6 rounded-3xl bg-white shadow-xl border border-green-100/50 flex flex-col justify-between">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="p-2 bg-green-100 rounded-full">
+                                <Sparkles className="w-4 h-4 text-green-600" />
+                            </div>
+                            <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Income</span>
+                        </div>
+                        <p className="text-5xl md:text-6xl font-bold text-[#00001c] mt-2 tracking-tight scramble-num" data-value={summary.totalIncome} data-currency="true">RM 0</p>
+                    </div>
+
+                    {/* Expenses */}
+                    <div className="dashboard-item lg:col-span-1 p-6 rounded-3xl bg-white shadow-xl border border-red-100/50 flex flex-col justify-between">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="p-2 bg-red-100 rounded-full">
+                                <History className="w-4 h-4 text-red-600" />
+                            </div>
+                            <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Expenses</span>
+                        </div>
+                        <p className="text-5xl md:text-6xl font-bold text-[#00001c] mt-2 tracking-tight scramble-num" data-value={summary.totalExpenses} data-currency="true">RM 0</p>
+                    </div>
+
+                    {/* Taxes */}
+                    <div className="dashboard-item lg:col-span-1 p-6 rounded-3xl bg-white shadow-xl border border-blue-100/50 flex flex-col justify-between">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="p-2 bg-blue-100 rounded-full">
+                                <Library className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Est. Tax</span>
+                        </div>
+                        <p className="text-5xl md:text-6xl font-bold text-[#00001c] mt-2 tracking-tight scramble-num" data-value={summary.estimatedTaxes} data-currency="true">RM 0</p>
+                    </div>
+
+                    {/* Gig Health Score (New) */}
+                    <div className="dashboard-item lg:col-span-1 p-6 rounded-3xl bg-[#00001c] text-white shadow-2xl flex flex-col items-center justify-center relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#00ff7f] opacity-10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                        <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest mb-4">Gig Health Score</h3>
+                        <GaugeChart value={85} color="#00ff7f" size={160} label="Profitability" />
+                    </div>
+                </div>
+
 
                 {/* Quick Actions Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
@@ -227,10 +267,10 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                         >
                             <IconWrapper
                                 icon={action.icon}
-                                className="mx-auto mb-2 bg-muted group-hover:bg-background transition-colors"
+                                className="mx-auto mb-2 bg-muted group-hover:bg-primary/10 group-hover:text-primary transition-colors text-foreground/80"
                             />
-                            <p className="text-sm font-medium">{action.title}</p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-sm font-bold text-[#00001c]">{action.title}</p>
+                            <p className="text-xs text-muted-foreground/80 font-medium">
                                 {action.description}
                             </p>
                         </div>
@@ -275,7 +315,7 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                                                 : 'text-red-600 dark:text-red-400 bg-red-500/10'
                                         )}
                                     >
-                                        {activity.amount > 0 ? '+' : '-'}$
+                                        {activity.amount > 0 ? '+' : '-'}RM
                                         {Math.abs(activity.amount).toFixed(2)}
                                     </div>
                                 </li>
