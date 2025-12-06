@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
-from .services import process_document, save_transactions_to_supabase, log_upload, generate_retirement_plan
+from .services import process_document, save_transactions_to_supabase, log_upload, chat_with_retirement_advisor
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -85,16 +85,23 @@ def hello_world(request):
 @permission_classes([AllowAny])
 def retirement_advisor_view(request):
     """
-    Generate AI retirement advice based on user input.
+    Generate AI retirement advice based on user input and chat history.
     """
     try:
         data = json.loads(request.body)
-        age = data.get('age')
-        current_savings = data.get('current_savings')
-        monthly_contribution = data.get('monthly_contribution')
-        retirement_age = data.get('retirement_age')
         
-        advice = generate_retirement_plan(age, current_savings, monthly_contribution, retirement_age)
+        # User profile data
+        user_profile = {
+            'age': data.get('age'),
+            'current_savings': data.get('current_savings'),
+            'monthly_contribution': data.get('monthly_contribution'),
+            'retirement_age': data.get('retirement_age')
+        }
+        
+        # Chat history (list of {role: 'user'|'model', content: '...'})
+        chat_history = data.get('messages', [])
+        
+        advice = chat_with_retirement_advisor(user_profile, chat_history)
         
         return Response({"advice": advice})
     except Exception as e:

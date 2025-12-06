@@ -14,8 +14,10 @@ export default function RetirementPage() {
     const [interestRate, setInterestRate] = useState<number | string>(5.5); // EPF average roughly 5-6%
 
     // --- State for AI Advisor ---
-    const [aiAdvice, setAiAdvice] = useState<string | null>(null);
+    const [messages, setMessages] = useState<{ role: 'user' | 'model', content: string }[]>([]);
+    const [inputMessage, setInputMessage] = useState('');
     const [isLoadingAi, setIsLoadingAi] = useState(false);
+    const [isChatStarted, setIsChatStarted] = useState(false);
 
     // --- Calculations ---
     const projectionData = useMemo(() => {
@@ -48,9 +50,21 @@ export default function RetirementPage() {
     const finalAmount = projectionData[projectionData.length - 1]?.balance || 0;
 
     // --- AI Advisor Handler ---
-    const handleGetAiAdvice = async () => {
+    const handleSendMessage = async (initial = false) => {
+        if (!initial && !inputMessage.trim()) return;
+
         setIsLoadingAi(true);
-        setAiAdvice(null);
+
+        // Construct new message list
+        let newMessages = [...messages];
+        if (!initial) {
+            newMessages.push({ role: 'user', content: inputMessage });
+            setMessages(newMessages);
+            setInputMessage('');
+        } else {
+            setIsChatStarted(true);
+        }
+
         try {
             const response = await fetch('http://127.0.0.1:8000/finance/retirement-advisor/', {
                 method: 'POST',
@@ -62,20 +76,19 @@ export default function RetirementPage() {
                     current_savings: Number(currentSavings),
                     monthly_contribution: Number(monthlyContribution),
                     retirement_age: Number(retirementAge),
-                    // In a real app, we'd fetch actual income/expenses from DB too
-                    // For now, we'll let the backend infer or just use these params
+                    messages: newMessages
                 }),
             });
 
             if (response.ok) {
                 const data = await response.json();
-                setAiAdvice(data.advice);
+                setMessages(prev => [...prev, { role: 'model', content: data.advice }]);
             } else {
-                setAiAdvice("Sorry, I couldn't generate advice right now. Please try again.");
+                setMessages(prev => [...prev, { role: 'model', content: "Sorry, I encountered an error. Please try again." }]);
             }
         } catch (error) {
             console.error("AI Error:", error);
-            setAiAdvice("Error connecting to the financial advisor.");
+            setMessages(prev => [...prev, { role: 'model', content: "Error connecting to the financial advisor." }]);
         } finally {
             setIsLoadingAi(false);
         }
@@ -211,9 +224,9 @@ export default function RetirementPage() {
                             </div>
                         </div>
 
-                        {/* AI Advisor Section */}
-                        <div className="bg-card p-6 rounded-xl border shadow-sm relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-10">
+                        {/* AI Chat Section */}
+                        <div className="bg-card p-6 rounded-xl border shadow-sm relative overflow-hidden flex flex-col min-h-[400px]">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                                 <Sparkles className="w-24 h-24" />
                             </div>
 
@@ -222,43 +235,70 @@ export default function RetirementPage() {
                                 AI Retirement Advisor
                             </h2>
 
-                            <p className="text-muted-foreground mb-6">
-                                Get personalized advice based on your current contributions and goals.
-                            </p>
-
-                            {!aiAdvice && !isLoadingAi && (
-                                <button
-                                    onClick={handleGetAiAdvice}
-                                    className="bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2"
-                                >
-                                    <Sparkles className="w-4 h-4" />
-                                    Generate AI Advice
-                                </button>
-                            )}
-
-                            {isLoadingAi && (
-                                <div className="flex items-center gap-3 text-muted-foreground">
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    Analyzing your financial data...
-                                </div>
-                            )}
-
-                            {aiAdvice && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="bg-muted/30 p-4 rounded-lg border border-primary/20"
-                                >
-                                    <div className="prose prose-invert max-w-none">
-                                        <p className="whitespace-pre-wrap leading-relaxed">{aiAdvice}</p>
-                                    </div>
+                            {!isChatStarted ? (
+                                <div className="flex flex-col items-center justify-center flex-1 text-center space-y-4">
+                                    <p className="text-muted-foreground">
+                                        Get personalized advice based on your current contributions and goals.
+                                    </p>
                                     <button
-                                        onClick={handleGetAiAdvice}
-                                        className="mt-4 text-xs text-primary hover:underline"
+                                        onClick={() => handleSendMessage(true)}
+                                        className="bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2"
                                     >
-                                        Refresh Advice
+                                        <Sparkles className="w-4 h-4" />
+                                        Generate Analysis
                                     </button>
-                                </motion.div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col flex-1 h-[400px]">
+                                    {/* Chat History */}
+                                    <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+                                        {messages.map((msg, idx) => (
+                                            <motion.div
+                                                key={idx}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                            >
+                                                <div className={`max-w-[85%] p-3 rounded-lg ${msg.role === 'user'
+                                                        ? 'bg-primary text-primary-foreground'
+                                                        : 'bg-muted/50 border border-white/10'
+                                                    }`}>
+                                                    <div className="prose prose-invert prose-sm max-w-none">
+                                                        <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                        {isLoadingAi && (
+                                            <div className="flex justify-start">
+                                                <div className="bg-muted/50 p-3 rounded-lg border border-white/10 flex items-center gap-2">
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    <span className="text-xs text-muted-foreground">Thinking...</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Input Area */}
+                                    <div className="flex gap-2 mt-auto pt-4 border-t border-white/10">
+                                        <input
+                                            type="text"
+                                            value={inputMessage}
+                                            onChange={(e) => setInputMessage(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                            placeholder="Ask a follow-up question..."
+                                            className="flex-1 bg-background border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                                            disabled={isLoadingAi}
+                                        />
+                                        <button
+                                            onClick={() => handleSendMessage()}
+                                            disabled={!inputMessage.trim() || isLoadingAi}
+                                            className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Send
+                                        </button>
+                                    </div>
+                                </div>
                             )}
                         </div>
 
