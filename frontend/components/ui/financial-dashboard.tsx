@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import {
@@ -8,10 +8,12 @@ import {
     Library,
     Search,
     Sparkles,
+    MessageCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GaugeChart } from './gauge-chart';
 import { Typewriter } from './typewriter';
+import { ChatModal } from './chat-modal';
 
 // --- TYPE DEFINITIONS ---
 type QuickAction = {
@@ -41,6 +43,7 @@ type FinancialSummary = {
     totalIncome: number;
     totalExpenses: number;
     estimatedTaxes: number;
+    gigHealthScore?: number;
 };
 
 interface FinancialDashboardProps {
@@ -76,13 +79,26 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
     summary,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const [inputValue, setInputValue] = React.useState("");
+    const [inputValue, setInputValue] = useState("");
+    const [isChatOpen, setIsChatOpen] = useState(false);
 
-    // Gig Health Score Logic
-    const healthScore = 10; // Example Value
+    // Gig Health Score Logic - Use real value from summary prop
+    const healthScore = summary.gigHealthScore || 0;
     let gaugeColor = "#00ff7f"; // Green
     if (healthScore < 50) gaugeColor = "#ef4444"; // Red
     else if (healthScore < 80) gaugeColor = "#f97316"; // Orange
+    
+    // Handle chat open
+    const handleOpenChat = () => {
+        setIsChatOpen(true);
+    };
+    
+    // Handle Enter key press in input
+    const handleInputKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && inputValue.trim()) {
+            handleOpenChat();
+        }
+    };
 
     useGSAP(() => {
         const items = gsap.utils.toArray<HTMLElement>('.dashboard-item');
@@ -214,6 +230,7 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                                 id="ai-input"
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
+                                onKeyPress={handleInputKeyPress}
                             />
                             {/* Typewriter Placeholder Overlay */}
                             <div
@@ -226,9 +243,9 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                                 What financial insight do you need today?
                             </div>
                             <kbd className="hidden sm:inline-flex items-center justify-center h-8 px-3 text-xs font-mono text-[#00001c]/40 bg-black/5 rounded-full border border-black/10 ml-4">
-                                ⌘ K
+                                Enter
                             </kbd>
-                        </div>
+                        </div>  
                     </div>
                 </div>
 
@@ -386,6 +403,32 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                     </div>
                 </div>
             </div>
+            
+            {/* Floating Chat Button - Always visible */}
+            <button
+                onClick={() => {
+                    setIsChatOpen(true);
+                    setInputValue(''); // Clear input when opening from button
+                }}
+                className="fixed bottom-8 right-8 z-50 p-4 bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-full shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 hover:scale-110 group animate-in zoom-in-0 slide-in-from-bottom-4"
+                title="Open AI Chat"
+            >
+                <MessageCircle className="w-6 h-6" />
+                {/* Notification badge if there's chat history */}
+                {typeof window !== 'undefined' && localStorage.getItem('sideduit_chat_history') && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></span>
+                )}
+            </button>
+            
+            {/* Chat Modal */}
+            <ChatModal 
+                isOpen={isChatOpen} 
+                onClose={() => {
+                    setIsChatOpen(false);
+                    setInputValue(''); // Clear input when closing
+                }}
+                initialQuery={inputValue}
+            />
         </div>
     );
 };
