@@ -6,6 +6,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from .supabase_utils import SupabaseFinancialCalculator
+from .rag import generate_rag_response
 
 
 @csrf_exempt
@@ -123,3 +124,38 @@ def dashboard_summary(request):
         "error": "This endpoint is deprecated. Use /finance/api/dashboard-summary/ instead.",
         "message": "All data is now stored in Supabase, not Django models."
     }, status=410)  # 410 Gone
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def chat_rag(request):
+    """
+    RAG-powered chat endpoint for financial insights.
+    
+    POST body:
+    {
+        "query": "How much did I spend on food last month?",
+        "user_id": "0"  // optional
+    }
+    
+    Returns:
+    {
+        "response": "AI-generated response",
+        "sources": [list of relevant transactions],
+        "total_sources": 10
+    }
+    """
+    try:
+        query = request.data.get('query', '')
+        user_id = request.data.get('user_id', None)
+        
+        if not query:
+            return Response({"error": "Query is required"}, status=400)
+        
+        # Generate RAG response
+        result = generate_rag_response(query, user_id)
+        
+        return Response(result)
+        
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
