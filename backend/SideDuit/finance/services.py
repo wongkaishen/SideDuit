@@ -105,14 +105,14 @@ def save_transactions_to_supabase(transactions):
         
     # Connection params
     # postgres://postgres:[YOUR_PASSWORD]@db.owlqezrqhwnhviwirsvs.supabase.co:5432/postgres
+    db_password = os.getenv("SUPABASE_DB_PASSWORD")
     if not db_password:
         raise ValueError("SUPABASE_DB_PASSWORD environment variable not set")
         
-    host = os.getenv("SUPABASE_DB_HOST", "db.owlqezrqhwnhviwirsvs.supabase.co")
-    port = "5432"
+    host = os.getenv("SUPABASE_DB_HOST", "aws-1-ap-northeast-2.pooler.supabase.com")
     port = "5432"
     dbname = "postgres"
-    user = "postgres"
+    user = os.getenv("SUPABASE_DB_USER", "postgres.owlqezrqhwnhviwirsvs")
     
     conn = None
     count = 0
