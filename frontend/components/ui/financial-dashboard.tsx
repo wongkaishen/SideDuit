@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GaugeChart } from './gauge-chart';
+import { Typewriter } from './typewriter';
 
 // --- TYPE DEFINITIONS ---
 type QuickAction = {
@@ -76,6 +77,12 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [inputValue, setInputValue] = React.useState("");
+
+    // Gig Health Score Logic
+    const healthScore = 10; // Example Value
+    let gaugeColor = "#00ff7f"; // Green
+    if (healthScore < 50) gaugeColor = "#ef4444"; // Red
+    else if (healthScore < 80) gaugeColor = "#f97316"; // Orange
 
     useGSAP(() => {
         const items = gsap.utils.toArray<HTMLElement>('.dashboard-item');
@@ -172,9 +179,21 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
             <div className="py-4 md:py-6">
                 {/* Header Section: Greeting & AI Badge */}
                 <div className="flex flex-col items-center justify-center mb-8 text-center animate-in fade-in slide-in-from-top-10 duration-700">
-                    <h1 className="text-4xl md:text-5xl font-bold text-[#00001c] mb-3">
-                        Good evening, Alex
-                    </h1>
+                    <div className="text-3xl md:text-5xl font-bold text-[#00001c] mb-3 flex flex-wrap justify-center items-center gap-2">
+                        <span>We help you</span>
+                        <Typewriter
+                            text={[
+                                "track your daily earnings",
+                                "estimate your tax payments",
+                                "understand your true profits"
+                            ]}
+                            speed={70}
+                            className="text-[#00b14f]"
+                            waitTime={1500}
+                            deleteSpeed={40}
+                            cursorChar={"_"}
+                        />
+                    </div>
                     <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-[#00ff7f]/10 border border-[#00ff7f]/20">
                         <Sparkles className="w-3 h-3 text-[#00b14f] mr-2" />
                         <span className="text-xs font-bold text-[#00b14f] tracking-widest uppercase">AI Powered</span>
@@ -216,43 +235,46 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                 {/* Core Metrics & Gig Health Score */}
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-12">
                     {/* Income */}
-                    <div className="dashboard-item lg:col-span-1 p-6 rounded-3xl bg-white shadow-xl border border-green-100/50 flex flex-col justify-between">
+                    <div className="dashboard-item lg:col-span-1 p-6 rounded-3xl bg-white shadow-xl border border-gray-100 flex flex-col justify-between relative z-10">
                         <div className="flex items-center gap-2 mb-2">
                             <div className="p-2 bg-green-100 rounded-full">
                                 <Sparkles className="w-4 h-4 text-green-600" />
                             </div>
-                            <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Income</span>
+                            <span className="text-xl font-bold text-[#00001c] uppercase tracking-wider">Income</span>
                         </div>
                         <p className="text-5xl md:text-6xl font-bold text-[#00001c] mt-2 tracking-tight scramble-num" data-value={summary.totalIncome} data-currency="true">RM 0</p>
                     </div>
 
                     {/* Expenses */}
-                    <div className="dashboard-item lg:col-span-1 p-6 rounded-3xl bg-white shadow-xl border border-red-100/50 flex flex-col justify-between">
+                    <div className="dashboard-item lg:col-span-1 p-6 rounded-3xl bg-white shadow-xl border border-gray-100 flex flex-col justify-between relative z-10">
                         <div className="flex items-center gap-2 mb-2">
                             <div className="p-2 bg-red-100 rounded-full">
                                 <History className="w-4 h-4 text-red-600" />
                             </div>
-                            <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Expenses</span>
+                            <span className="text-xl font-bold text-[#00001c] uppercase tracking-wider">Expenses</span>
                         </div>
                         <p className="text-5xl md:text-6xl font-bold text-[#00001c] mt-2 tracking-tight scramble-num" data-value={summary.totalExpenses} data-currency="true">RM 0</p>
                     </div>
 
                     {/* Taxes */}
-                    <div className="dashboard-item lg:col-span-1 p-6 rounded-3xl bg-white shadow-xl border border-blue-100/50 flex flex-col justify-between">
+                    <div className="dashboard-item lg:col-span-1 p-6 rounded-3xl bg-white shadow-xl border border-gray-100 flex flex-col justify-between relative z-10">
                         <div className="flex items-center gap-2 mb-2">
                             <div className="p-2 bg-blue-100 rounded-full">
                                 <Library className="w-4 h-4 text-blue-600" />
                             </div>
-                            <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Est. Tax</span>
+                            <span className="text-xl font-bold text-[#00001c] uppercase tracking-wider">Est. Tax</span>
                         </div>
                         <p className="text-5xl md:text-6xl font-bold text-[#00001c] mt-2 tracking-tight scramble-num" data-value={summary.estimatedTaxes} data-currency="true">RM 0</p>
                     </div>
 
                     {/* Gig Health Score (New) */}
                     <div className="dashboard-item lg:col-span-1 p-6 rounded-3xl bg-[#00001c] text-white shadow-2xl flex flex-col items-center justify-center relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#00ff7f] opacity-10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                        <div
+                            className="absolute top-0 right-0 w-32 h-32 opacity-10 rounded-full blur-3xl -mr-10 -mt-10"
+                            style={{ backgroundColor: gaugeColor }}
+                        ></div>
                         <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest mb-4">Gig Health Score</h3>
-                        <GaugeChart value={85} color="#00ff7f" size={160} label="Profitability" />
+                        <GaugeChart value={healthScore} color={gaugeColor} size={160} label="Profitability" />
                     </div>
                 </div>
 
@@ -280,7 +302,7 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                 {/* Main Content Grid for Desktop */}
                 <div className="grid md:grid-cols-2 gap-6">
                     {/* Recent Activity */}
-                    <div className="dashboard-item mb-6 md:mb-0">
+                    <div className="dashboard-item mb-6 md:mb-0 bg-white rounded-3xl p-6 shadow-xl border border-gray-100/50 h-full">
                         <div className="flex items-center gap-2 mb-4">
                             <History className="w-5 h-5 text-muted-foreground" />
                             <h2 className="text-sm font-semibold">Recent activity</h2>
@@ -324,7 +346,7 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                     </div>
 
                     {/* Financial Services */}
-                    <div className="dashboard-item">
+                    <div className="dashboard-item bg-white rounded-3xl p-6 shadow-xl border border-gray-100/50 h-full">
                         <div className="flex items-center gap-2 mb-4">
                             <Library className="w-5 h-5 text-muted-foreground" />
                             <h2 className="text-sm font-semibold">Financial services</h2>
@@ -365,5 +387,5 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                 </div>
             </div>
         </div>
-        );
+    );
 };
