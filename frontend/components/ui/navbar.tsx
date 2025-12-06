@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Upload, Settings, PieChart } from "lucide-react";
+import { Home, Upload, PieChart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -25,11 +25,6 @@ const navItems = [
         name: "Retirement",
         href: "/retirement",
         icon: PieChart, // Reusing PieChart for now, or could use another icon if available
-    },
-    {
-        name: "Settings",
-        href: "/settings", // Placeholder
-        icon: Settings,
     },
 ];
 
