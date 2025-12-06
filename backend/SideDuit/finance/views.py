@@ -1,22 +1,18 @@
 from django.shortcuts import render
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from .services import process_document, save_transactions_to_supabase, log_upload
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from django.contrib.auth.models import User
-from .utils import FinancialCalculator
-
+from .supabase_utils import SupabaseFinancialCalculator
 
 
 @csrf_exempt
 def upload_view(request):
     """
     Handle file upload and processing.
-    
-    For multi-user apps, add @login_required decorator and pass request.user.id
+    Saves data directly to Supabase.
     """
     if request.method == 'POST':
         files = request.FILES.getlist('documents')
@@ -39,7 +35,7 @@ def upload_view(request):
                 # Process with LLM
                 transactions = process_document(f, f.name)
                 
-                # Save to DB with user_id and upload_id
+                # Save to Supabase with user_id and upload_id
                 if transactions:
                     count = save_transactions_to_supabase(transactions, user_id=user_id, upload_id=upload_id)
                     total_processed += count
@@ -58,22 +54,67 @@ def upload_view(request):
                 
     return render(request, 'finance/upload.html')
 
-@api_view(['GET'])
-@permission_classes([AllowAny]) # For hackathon demo simplicity, allowing any (or use IsAuthenticated if you login)
-def dashboard_summary(request):
-    # For demo purposes, if no user is logged in, use the 'testuser' we seeded
-    if request.user.is_authenticated:
-        user = request.user
-    else:
-        user = User.objects.filter(username='testuser').first()
-        if not user:
-            return Response({"error": "No test user found. Run seed_data first."}, status=404)
-
-    calculator = FinancialCalculator(user)
-    summary = calculator.get_summary()
-    
-    return Response(summary)
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def hello_world(request):
+    """Health check endpoint"""
     return Response({"message": "Hello from Django SideDuit Backend!"})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def supabase_dashboard_summary(request):
+    """
+    Get dashboard summary from Supabase transactions table.
+    Returns total income, expenses, and estimated tax.
+    
+    Query params:
+    - user_id: Filter by user (optional, defaults to None for all users)
+    """
+    try:
+        # For demo purposes, use user_id from query params or default to None (all users)
+        user_id = request.GET.get('user_id', None)
+
+        calculator = SupabaseFinancialCalculator(user_id=user_id)
+        summary = calculator.get_dashboard_summary()
+
+        return Response(summary)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def recent_activities(request):
+    """
+    Get recent transactions from Supabase.
+    
+    Query params:
+    - user_id: Filter by user (optional)
+    - limit: Number of activities to return (default: 5)
+    """
+    try:
+        user_id = request.GET.get('user_id', None)
+        limit = int(request.GET.get('limit', 5))
+
+        calculator = SupabaseFinancialCalculator(user_id=user_id)
+        activities = calculator.get_recent_activities(limit=limit)
+
+        return Response({"activities": activities})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+# DEPRECATED ENDPOINT - Kept for backwards compatibility
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def dashboard_summary(request):
+    """
+    DEPRECATED: This endpoint used Django models (Income/Expense).
+    Use /api/dashboard-summary/ instead (uses Supabase directly).
+    """
+    return Response({
+        "error": "This endpoint is deprecated. Use /finance/api/dashboard-summary/ instead.",
+        "message": "All data is now stored in Supabase, not Django models."
+    }, status=410)  # 410 Gone

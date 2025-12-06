@@ -41,6 +41,7 @@ type FinancialSummary = {
     totalIncome: number;
     totalExpenses: number;
     estimatedTaxes: number;
+    gigHealthScore?: number;
 };
 
 interface FinancialDashboardProps {
@@ -78,8 +79,8 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const [inputValue, setInputValue] = React.useState("");
 
-    // Gig Health Score Logic
-    const healthScore = 10; // Example Value
+    // Gig Health Score Logic - Use real value from summary prop
+    const healthScore = summary.gigHealthScore || 0;
     let gaugeColor = "#00ff7f"; // Green
     if (healthScore < 50) gaugeColor = "#ef4444"; // Red
     else if (healthScore < 80) gaugeColor = "#f97316"; // Orange

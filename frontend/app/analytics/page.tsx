@@ -1,108 +1,94 @@
 "use client";
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import {
-    BarChart3,
-    PieChart,
     TrendingUp,
     TrendingDown,
-    ArrowUpRight,
     DollarSign,
     Activity,
-    Bike,
-    ShoppingBag,
-    Truck
+    Loader2,
+    FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Navbar } from '@/components/ui/navbar';
 import { Sparkline } from '@/components/ui/sparkline';
+import { fetchAllTransactions, groupTransactionsByMonth, type MonthlyData } from '@/lib/api';
 
 export default function AnalyticsPage() {
     const containerRef = useRef<HTMLDivElement>(null);
-    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-    const [selectedMonth, setSelectedMonth] = useState("July");
+    const [monthlyData, setMonthlyData] = useState<Record<string, MonthlyData>>({});
+    const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+    const [selectedMonth, setSelectedMonth] = useState<string>('');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Mock Data for Months
-    const months = ["May", "June", "July"];
-    const monthlyStats: Record<string, { income: any[], expenses: any[], totalIncome: number, totalExpense: number, netProfit: number, incomeTrend: number[], expenseTrend: number[], taxProgress: number }> = {
-        "May": {
-            income: [
-                { name: "Grab Earnings", icon: Bike, amount: 2100.00, color: "bg-[#00b14f]", width: "75%" },
-                { name: "Foodpanda", icon: ShoppingBag, amount: 980.50, color: "bg-[#d70f64]", width: "50%" },
-                { name: "Lalamove", icon: Truck, amount: 650.00, color: "bg-[#ff6200]", width: "35%" },
-                { name: "Freelance Design", icon: Activity, amount: 300.00, color: "bg-blue-500", width: "20%" },
-            ],
-            expenses: [
-                { category: "Vehicle Maint.", amount: 150.00, percentage: 20, color: "bg-red-500" },
-                { category: "Petrol/Fuel", amount: 380.00, percentage: 40, color: "bg-orange-500" },
-                { category: "Food & Dining", amount: 600.00, percentage: 60, color: "bg-yellow-500" },
-                { category: "Subscriptions", amount: 120.00, percentage: 15, color: "bg-purple-500" },
-            ],
-            totalIncome: 4030.50,
-            totalExpense: 1250.00,
-            netProfit: 2780.50,
-            incomeTrend: [150, 230, 210, 320, 290, 400, 380],
-            expenseTrend: [100, 80, 120, 90, 150, 130, 110],
-            taxProgress: 35
-        },
-        "June": {
-            income: [
-                { name: "Grab Earnings", icon: Bike, amount: 2600.00, color: "bg-[#00b14f]", width: "90%" },
-                { name: "Foodpanda", icon: ShoppingBag, amount: 1100.00, color: "bg-[#d70f64]", width: "55%" },
-                { name: "Lalamove", icon: Truck, amount: 750.00, color: "bg-[#ff6200]", width: "40%" },
-                { name: "Freelance Design", icon: Activity, amount: 0.00, color: "bg-blue-500", width: "0%" },
-            ],
-            expenses: [
-                { category: "Vehicle Maint.", amount: 0.00, percentage: 0, color: "bg-red-500" },
-                { category: "Petrol/Fuel", amount: 450.00, percentage: 50, color: "bg-orange-500" },
-                { category: "Food & Dining", amount: 700.00, percentage: 70, color: "bg-yellow-500" },
-                { category: "Subscriptions", amount: 120.00, percentage: 15, color: "bg-purple-500" },
-            ],
-            totalIncome: 4450.00,
-            totalExpense: 1270.00,
-            netProfit: 3180.00,
-            incomeTrend: [300, 350, 320, 400, 420, 450, 500],
-            expenseTrend: [120, 110, 130, 140, 120, 150, 160],
-            taxProgress: 40
-        },
-        "July": {
-            income: [
-                { name: "Grab Earnings", icon: Bike, amount: 2450.50, color: "bg-[#00b14f]", width: "85%" },
-                { name: "Foodpanda", icon: ShoppingBag, amount: 1240.00, color: "bg-[#d70f64]", width: "60%" },
-                { name: "Lalamove", icon: Truck, amount: 820.20, color: "bg-[#ff6200]", width: "45%" },
-                { name: "Freelance Design", icon: Activity, amount: 450.00, color: "bg-blue-500", width: "30%" },
-            ],
-            expenses: [
-                { category: "Vehicle Maint.", amount: 350.00, percentage: 35, color: "bg-red-500" },
-                { category: "Petrol/Fuel", amount: 420.00, percentage: 45, color: "bg-orange-500" },
-                { category: "Food & Dining", amount: 650.00, percentage: 65, color: "bg-yellow-500" },
-                { category: "Subscriptions", amount: 120.00, percentage: 15, color: "bg-purple-500" },
-            ],
-            totalIncome: 4960.70,
-            totalExpense: 1540.00,
-            netProfit: 3420.70,
-            incomeTrend: [400, 380, 450, 420, 480, 520, 600],
-            expenseTrend: [200, 180, 220, 250, 230, 280, 300],
-            taxProgress: 45
+    useEffect(() => {
+        async function loadAnalytics() {
+            try {
+                setLoading(true);
+                setError(null);
+
+                const transactions = await fetchAllTransactions();
+                const grouped = groupTransactionsByMonth(transactions);
+                
+                // Get available months sorted by most recent
+                const months = Object.keys(grouped).sort((a, b) => {
+                    return new Date(b).getTime() - new Date(a).getTime();
+                });
+
+                setMonthlyData(grouped);
+                setAvailableMonths(months);
+                
+                // Select the most recent month by default
+                if (months.length > 0) {
+                    setSelectedMonth(months[0]);
+                }
+            } catch (err) {
+                console.error('Error loading analytics:', err);
+                setError('Failed to load analytics data');
+            } finally {
+                setLoading(false);
+            }
         }
+
+        loadAnalytics();
+    }, []);
+
+    const currentData = selectedMonth ? monthlyData[selectedMonth] : null;
+
+    // Calculate simple trend data (last 7 days of transactions)
+    const getTrendData = (transactions: any[], type: 'income' | 'expense') => {
+        if (!transactions || transactions.length === 0) return [0, 0, 0, 0, 0, 0, 0];
+        
+        const last7Days = Array(7).fill(0);
+        const today = new Date();
+        
+        transactions.forEach(t => {
+            if (t.transaction_type.toLowerCase() === type) {
+                const txDate = new Date(t.date);
+                const daysDiff = Math.floor((today.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24));
+                if (daysDiff >= 0 && daysDiff < 7) {
+                    last7Days[6 - daysDiff] += Math.abs(t.amount);
+                }
+            }
+        });
+        
+        return last7Days;
     };
 
-    const currentData = monthlyStats[selectedMonth];
-
     useGSAP(() => {
+        if (!currentData) return;
+
         // Selectors
         const header = '.analytics-header';
-        const summaryCards = '.summary-card'; // New
+        const summaryCards = '.summary-card';
         const incomeCard = '.income-card';
         const expenseCard = '.expense-card';
-        const incomeBars = gsap.utils.toArray<HTMLElement>('.income-bar');
-        const expenseDonuts = gsap.utils.toArray<HTMLElement>('.expense-item');
         const numbers = gsap.utils.toArray<HTMLElement>('.scramble-val');
-        const taxBar = '.tax-progress-bar'; // New
+        const taxBar = '.tax-progress-bar';
 
-        // 1. Initial State (Hidden & Twisted)
+        // 1. Initial State
         gsap.set(header, { autoAlpha: 0, y: -50 });
         gsap.set(summaryCards, { autoAlpha: 0, y: 30, scale: 0.95 });
         gsap.set([incomeCard, expenseCard], {
@@ -113,8 +99,6 @@ export default function AnalyticsPage() {
             filter: 'blur(10px)',
             transformPerspective: 1000
         });
-        gsap.set(incomeBars, { width: 0 });
-        gsap.set(expenseDonuts, { autoAlpha: 0, x: 20 });
         gsap.set(taxBar, { width: 0 });
 
         // 2. Header Entry
@@ -137,16 +121,17 @@ export default function AnalyticsPage() {
         });
 
         // 4. Tax Bar Fill
+        const taxProgress = Math.min((currentData.totalIncome / 10000) * 100, 100);
         gsap.to(taxBar, {
             delay: 0.6,
             duration: 1.5,
-            width: (i, target) => target.dataset.width,
+            width: `${taxProgress}%`,
             ease: "power2.out"
         });
 
         // 5. Cards Explosion
         gsap.to([incomeCard, expenseCard], {
-            delay: 0.5, // Delayed slightly more
+            delay: 0.5,
             duration: 1.4,
             autoAlpha: 1,
             y: 0,
@@ -157,26 +142,7 @@ export default function AnalyticsPage() {
             stagger: 0.2
         });
 
-        // 6. Bar Chart Animation
-        gsap.to(incomeBars, {
-            delay: 1.0,
-            duration: 1.5,
-            width: (i, target) => target.dataset.width,
-            ease: "power4.out",
-            stagger: 0.1
-        });
-
-        // 7. Expense Items Stagger
-        gsap.to(expenseDonuts, {
-            delay: 1.2,
-            duration: 0.8,
-            autoAlpha: 1,
-            x: 0,
-            ease: "back.out(2)",
-            stagger: 0.1
-        });
-
-        // 8. Number Scramble
+        // 6. Number Scramble
         numbers.forEach(el => {
             const raw = el.dataset.value;
             if (!raw) return;
@@ -193,50 +159,40 @@ export default function AnalyticsPage() {
             });
         });
 
-    }, { scope: containerRef });
+    }, { scope: containerRef, dependencies: [currentData] });
 
-    // Re-trigger animations on Month Change
-    useGSAP(() => {
-        const numbers = gsap.utils.toArray<HTMLElement>('.scramble-val');
-        const incomeBars = gsap.utils.toArray<HTMLElement>('.income-bar');
-        const taxBar = document.querySelector('.tax-progress-bar');
+    // Loading state
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-background p-4 pt-20 md:pt-24 flex items-center justify-center">
+                <div className="text-center">
+                    <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+                    <p className="text-muted-foreground">Loading analytics...</p>
+                </div>
+            </div>
+        );
+    }
 
-        // Animate Bars to new width
-        gsap.to(incomeBars, {
-            width: (i, target) => target.dataset.width,
-            duration: 1,
-            ease: "elastic.out(1, 0.7)"
-        });
+    // Error state
+    if (error || !currentData) {
+        return (
+            <div className="min-h-screen bg-background p-4 pt-20 md:pt-24 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-red-500 mb-4">{error || 'No data available'}</p>
+                    <button 
+                        onClick={() => window.location.reload()}
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
-        // Animate Tax Bar
-        if (taxBar) {
-            gsap.to(taxBar, {
-                width: `${currentData.taxProgress}%`,
-                duration: 1.2,
-                ease: "power2.inOut"
-            });
-        }
-
-        // Re-scramble Numbers
-        numbers.forEach(el => scrambleNumber(el));
-
-    }, { scope: containerRef, dependencies: [selectedMonth] });
-
-    const scrambleNumber = (el: HTMLElement) => {
-        const raw = el.dataset.value;
-        if (!raw) return;
-        const endVal = parseFloat(raw);
-        const obj = { val: 0 };
-
-        gsap.to(obj, {
-            val: endVal,
-            duration: 1.5,
-            ease: "power2.out",
-            onUpdate: () => {
-                el.innerText = 'RM ' + obj.val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            }
-        });
-    };
+    const incomeTrend = getTrendData(currentData.transactions, 'income');
+    const expenseTrend = getTrendData(currentData.transactions, 'expense');
+    const taxProgress = Math.min((currentData.totalIncome / 10000) * 100, 100);
 
     return (
         <div ref={containerRef} className="min-h-screen bg-background p-4 pt-20 md:pt-24 perspective-1000">
@@ -252,25 +208,27 @@ export default function AnalyticsPage() {
                     </div>
 
                     {/* Month Selector */}
-                    <div className="bg-white rounded-full p-1 shadow-md border flex items-center">
-                        {months.map((m) => (
-                            <button
-                                key={m}
-                                onClick={() => setSelectedMonth(m)}
-                                className={cn(
-                                    "px-6 py-2 rounded-full text-sm font-semibold transition-all duration-300",
-                                    selectedMonth === m
-                                        ? "bg-[#00001c] text-white shadow-lg scale-105"
-                                        : "text-muted-foreground hover:bg-muted"
-                                )}
-                            >
-                                {m}
-                            </button>
-                        ))}
-                    </div>
+                    {availableMonths.length > 0 && (
+                        <div className="bg-white rounded-full p-1 shadow-md border flex items-center flex-wrap gap-1">
+                            {availableMonths.slice(0, 3).map((month) => (
+                                <button
+                                    key={month}
+                                    onClick={() => setSelectedMonth(month)}
+                                    className={cn(
+                                        "px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300",
+                                        selectedMonth === month
+                                            ? "bg-[#00001c] text-white shadow-lg scale-105"
+                                            : "text-muted-foreground hover:bg-muted"
+                                    )}
+                                >
+                                    {month.split(' ')[0]}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
-                {/* VISUAL METRICS SUMMARY (NEW) */}
+                {/* VISUAL METRICS SUMMARY */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     {/* Income Summary */}
                     <div className="summary-card bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow relative overflow-hidden">
@@ -283,9 +241,8 @@ export default function AnalyticsPage() {
                                 <TrendingUp className="w-4 h-4 text-[#00b14f]" />
                             </div>
                         </div>
-                        {/* Sparkline */}
                         <div className="mt-4 h-12 w-full">
-                            <Sparkline data={currentData.incomeTrend} color="#00b14f" height={40} strokeWidth={3} />
+                            <Sparkline data={incomeTrend} color="#00b14f" height={40} strokeWidth={3} />
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">Last 7 Days Trend</p>
                     </div>
@@ -301,9 +258,8 @@ export default function AnalyticsPage() {
                                 <TrendingDown className="w-4 h-4 text-red-500" />
                             </div>
                         </div>
-                        {/* Sparkline */}
                         <div className="mt-4 h-12 w-full">
-                            <Sparkline data={currentData.expenseTrend} color="#ef4444" height={40} strokeWidth={3} />
+                            <Sparkline data={expenseTrend} color="#ef4444" height={40} strokeWidth={3} />
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">Last 7 Days Trend</p>
                     </div>
@@ -320,16 +276,14 @@ export default function AnalyticsPage() {
                             </div>
                         </div>
 
-                        {/* Progress Bar */}
                         <div className="mt-2">
                             <div className="flex justify-between text-xs font-semibold mb-1">
                                 <span className="text-amber-600">Tax threshold reached</span>
-                                <span className="text-amber-600">{currentData.taxProgress}%</span>
+                                <span className="text-amber-600">{taxProgress.toFixed(0)}%</span>
                             </div>
                             <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                                 <div
                                     className="tax-progress-bar h-full bg-amber-500 rounded-full relative"
-                                    data-width={`${currentData.taxProgress}%`}
                                     style={{ width: 0 }}
                                 >
                                     <div className="absolute top-0 right-0 bottom-0 w-20 bg-gradient-to-r from-transparent to-white/30 animate-pulse" />
@@ -342,89 +296,65 @@ export default function AnalyticsPage() {
 
                 {/* Main Grid */}
                 <div className="grid lg:grid-cols-2 gap-8">
-
                     {/* INCOME SECTION */}
                     <div className="income-card bg-[#00001c] rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden group">
-                        {/* Background Decor */}
                         <div className="absolute top-0 right-0 w-96 h-96 bg-[#00ff7f] opacity-5 rounded-full blur-[100px] pointer-events-none -mr-20 -mt-20 transition-all duration-700 group-hover:opacity-10" />
 
                         <div className="flex items-center justify-between mb-8">
                             <div>
                                 <h2 className="text-2xl font-bold flex items-center gap-2">
-                                    <TrendingUp className="w-6 h-6 text-[#00ff7f]" /> Income Breakdown
+                                    <TrendingUp className="w-6 h-6 text-[#00ff7f]" /> Income Overview
                                 </h2>
-                                <p className="text-white/50 text-sm">Monthly Earnings by Platform</p>
+                                <p className="text-white/50 text-sm">Total earnings for {selectedMonth}</p>
                             </div>
                             <div className="text-right">
                                 <p className="text-3xl font-bold font-mono text-[#00ff7f] scramble-val" data-value={currentData.totalIncome}>RM 0.00</p>
-                                <p className="text-xs text-white/50 uppercase tracking-widest">Total Income</p>
+                                <p className="text-xs text-white/50 uppercase tracking-widest">{currentData.incomeCount} Transactions</p>
                             </div>
                         </div>
 
-                        <div className="space-y-6">
-                            {currentData.income.map((source, i) => (
-                                <div
-                                    key={i}
-                                    className="relative"
-                                    onMouseEnter={() => setHoveredIndex(i)}
-                                    onMouseLeave={() => setHoveredIndex(null)}
-                                >
-                                    <div className="flex items-center justify-between mb-2 text-sm z-10 relative">
-                                        <div className="flex items-center gap-2">
-                                            <source.icon className={cn("w-4 h-4", hoveredIndex === i ? "text-white" : "text-white/60")} />
-                                            <span className="font-medium">{source.name}</span>
-                                        </div>
-                                        <span className="font-mono opacity-80">RM {source.amount.toLocaleString()}</span>
-                                    </div>
-                                    <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-                                        <div
-                                            className={cn("income-bar h-full rounded-full transition-shadow duration-300", source.color)}
-                                            data-width={source.width}
-                                            style={{ boxShadow: hoveredIndex === i ? `0 0 15px currentColor` : 'none' }}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="bg-white/10 rounded-2xl p-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <span className="text-white/70 text-sm">Average per transaction</span>
+                                <span className="text-xl font-bold text-white">
+                                    RM {currentData.incomeCount > 0 ? (currentData.totalIncome / currentData.incomeCount).toFixed(2) : '0.00'}
+                                </span>
+                            </div>
+                            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                <div className="h-full bg-[#00ff7f] rounded-full" style={{ width: '100%' }} />
+                            </div>
                         </div>
                     </div>
 
                     {/* EXPENSES SECTION */}
-                    <div className="expense-card bg-card border rounded-3xl p-8 shadow-lg relative perspective-500">
+                    <div className="expense-card bg-card border rounded-3xl p-8 shadow-lg relative">
                         <div className="flex items-center justify-between mb-8">
                             <div>
                                 <h2 className="text-2xl font-bold text-[#00001c] flex items-center gap-2">
                                     <TrendingDown className="w-6 h-6 text-red-500" /> Expense Analysis
                                 </h2>
-                                <p className="text-muted-foreground text-sm">Operational Costs & Spending</p>
+                                <p className="text-muted-foreground text-sm">Total costs for {selectedMonth}</p>
                             </div>
                             <div className="bg-red-500/10 px-4 py-2 rounded-xl">
                                 <p className="text-xl font-bold text-red-600 scramble-val" data-value={currentData.totalExpense}>RM 0.00</p>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {currentData.expenses.map((expense, i) => (
-                                <div
-                                    key={i}
-                                    className="expense-item p-4 rounded-2xl bg-muted/50 hover:bg-muted transition-colors border border-transparent hover:border-red-500/20 cursor-default group"
-                                >
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className={cn("w-3 h-3 rounded-full mt-1.5", expense.color)} />
-                                        <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-bold text-[#00001c] mb-1 font-mono">RM {expense.amount}</p>
-                                        <p className="text-sm font-medium text-muted-foreground">{expense.category}</p>
-                                    </div>
-                                    <div className="mt-3 w-full bg-black/5 h-1.5 rounded-full overflow-hidden">
-                                        <div className={cn("h-full rounded-full", expense.color)} style={{ width: `${expense.percentage}%` }} />
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="bg-muted/50 rounded-2xl p-6 mb-4">
+                            <div className="flex justify-between items-center mb-4">
+                                <span className="text-muted-foreground text-sm">Average per transaction</span>
+                                <span className="text-xl font-bold text-[#00001c]">
+                                    RM {currentData.expenseCount > 0 ? (currentData.totalExpense / currentData.expenseCount).toFixed(2) : '0.00'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-muted-foreground">Total Transactions</span>
+                                <span className="font-semibold">{currentData.expenseCount}</span>
+                            </div>
                         </div>
 
-                        {/* Interactive Net Profit Box */}
-                        <div className="expense-item mt-6 p-6 bg-gradient-to-r from-[#00001c] to-[#1a1a4a] rounded-2xl text-white flex items-center justify-between shadow-xl cursor-pointer hover:scale-[1.02] transition-transform">
+                        {/* Net Profit Box */}
+                        <div className="p-6 bg-gradient-to-r from-[#00001c] to-[#1a1a4a] rounded-2xl text-white flex items-center justify-between shadow-xl">
                             <div>
                                 <p className="text-sm text-white/60 mb-1">Net Monthly Profit</p>
                                 <p className="text-3xl font-bold font-mono text-[#00ff7f] scramble-val" data-value={currentData.netProfit}>RM 0.00</p>
@@ -434,9 +364,40 @@ export default function AnalyticsPage() {
                             </div>
                         </div>
                     </div>
-
                 </div>
+
+                {/* Recent Transactions List */}
+                {currentData.transactions.length > 0 && (
+                    <div className="mt-8 bg-white rounded-3xl p-8 shadow-lg">
+                        <h3 className="text-xl font-bold text-[#00001c] mb-6 flex items-center gap-2">
+                            <FileText className="w-5 h-5" />
+                            Recent Transactions ({selectedMonth})
+                        </h3>
+                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                            {currentData.transactions.slice(0, 20).map((transaction, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn(
+                                            "w-2 h-2 rounded-full",
+                                            transaction.transaction_type.toLowerCase() === 'income' ? "bg-green-500" : "bg-red-500"
+                                        )} />
+                                        <div>
+                                            <p className="font-medium text-sm">{transaction.document_name || `${transaction.transaction_type} Transaction`}</p>
+                                            <p className="text-xs text-muted-foreground">{new Date(transaction.date).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <div className={cn(
+                                        "text-sm font-mono font-bold",
+                                        transaction.transaction_type.toLowerCase() === 'income' ? "text-green-600" : "text-red-600"
+                                    )}>
+                                        {transaction.transaction_type.toLowerCase() === 'income' ? '+' : '-'}RM {Math.abs(transaction.amount).toFixed(2)}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
-        </div >
+        </div>
     );
 }

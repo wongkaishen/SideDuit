@@ -1,21 +1,28 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FinancialDashboard } from '@/components/ui/financial-dashboard';
+import { 
+  fetchDashboardSummary, 
+  fetchRecentActivities, 
+  formatActivityForDisplay,
+  calculateGigHealthScore,
+  type DashboardSummary,
+  type Activity 
+} from '@/lib/api';
 
-// Import Lucide icons for the demo
+// Import Lucide icons
 import {
   ArrowLeftRight,
   CreditCard,
   Landmark,
-  LineChart,
   ShieldCheck,
   SwitchCamera,
   Target,
   TrendingUp,
   Users,
   FileText,
-  Zap,
+  Loader2,
 } from 'lucide-react';
 
 // --- Fallback Icon for Logo ---
@@ -33,45 +40,12 @@ const LogoIcon = ({
   </div>
 );
 
-// --- DEMO DATA ---
+// --- STATIC DATA (Quick Actions & Services) ---
 const quickActionsData = [
   { icon: ArrowLeftRight, title: 'Transfer', description: 'Send Money', href: '/transfer' },
   { icon: Landmark, title: 'Pay', description: 'Bills & Payments', href: '/pay' },
   { icon: TrendingUp, title: 'Invest', description: 'Grow Wealth', href: '/invest' },
   { icon: CreditCard, title: 'Cards', description: 'Manage Cards', href: '/cards' },
-];
-
-const recentActivityData = [
-  {
-    icon: FileText,
-    title: 'Upwork Freelance Payout',
-    time: 'Processed 5 mins ago',
-    amount: 850.00,
-  },
-  {
-    icon: Zap,
-    title: 'AWS Server Hosting',
-    time: 'Yesterday, 8:30 PM',
-    amount: -84.20,
-  },
-  {
-    icon: <LogoIcon letter="A" className="bg-[#FF0000]" />, // Adobe Red
-    title: 'Adobe Creative Cloud',
-    time: '2 hours ago',
-    amount: -54.99,
-  },
-  {
-    icon: <LogoIcon letter="G" className="bg-[#00b14f]" />,
-    title: 'Grab Driver Cashout',
-    time: '1 day ago',
-    amount: 120.50,
-  },
-  {
-    icon: <LogoIcon letter="C" className="bg-blue-600" />,
-    title: 'Consulting Invoice #402',
-    time: '2 days ago',
-    amount: 2500.00,
-  },
 ];
 
 const financialServicesData = [
@@ -92,6 +66,7 @@ const financialServicesData = [
     icon: SwitchCamera,
     title: 'Cash Flow',
     description: 'Income & expense analysis',
+    href: '/analytics',
   },
   {
     icon: Users,
@@ -100,14 +75,91 @@ const financialServicesData = [
   },
 ];
 
-const summaryData = {
-  totalIncome: 5450.00,
-  totalExpenses: 2315.99,
-  estimatedTaxes: 1245.00,
-}
+export default function FinancialDashboardPage() {
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [gigHealthScore, setGigHealthScore] = useState(0);
 
-// --- DEMO COMPONENT ---
-export default function FinancialDashboardDemo() {
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch data from backend API
+        const [summaryData, activitiesData] = await Promise.all([
+          fetchDashboardSummary(),
+          fetchRecentActivities(undefined, 5),
+        ]);
+
+        setSummary(summaryData);
+        setActivities(activitiesData);
+        
+        // Calculate Gig Health Score
+        const healthScore = calculateGigHealthScore(summaryData);
+        setGigHealthScore(healthScore);
+
+      } catch (err) {
+        console.error('Error loading dashboard data:', err);
+        setError('Failed to load dashboard data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="bg-background min-h-screen p-4 md:p-8 pt-20 md:pt-24 flex flex-col items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your financial dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !summary) {
+    return (
+      <div className="bg-background min-h-screen p-4 md:p-8 pt-20 md:pt-24 flex flex-col items-center justify-center">
+        <div className="text-center max-w-md">
+          <p className="text-red-500 mb-4">{error || 'No data available'}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Format recent activities for display
+  const recentActivityData = activities.map((activity) => {
+    const formatted = formatActivityForDisplay(activity);
+    return {
+      icon: FileText,
+      title: formatted.title,
+      time: formatted.time,
+      amount: formatted.amount,
+    };
+  });
+
+  // Map summary data to expected format
+  const summaryData = {
+    totalIncome: summary.total_income,
+    totalExpenses: summary.total_expenses,
+    estimatedTaxes: summary.estimated_annual_tax / 12, // Monthly estimate
+    gigHealthScore: gigHealthScore,
+  };
+
   return (
     <div className="bg-background min-h-screen p-4 md:p-8 pt-20 md:pt-24 flex flex-col items-center">
       <FinancialDashboard
