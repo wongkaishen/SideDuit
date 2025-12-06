@@ -363,3 +363,103 @@ def log_upload(file_obj, filename, user_id=None):
     finally:
         if conn:
             release_db_connection(conn)
+
+def chat_with_retirement_advisor(user_profile, chat_history):
+    """
+    Generate retirement advice using Gemini with chat history.
+    """
+    model = get_gemini_model()
+    
+    # Construct history for Gemini
+    history = []
+    
+    # System instruction as the first part of the context
+    system_prompt = f"""
+    You are a friendly financial helper for a gig worker in Malaysia.
+    
+    User Profile:
+    - Current Age: {user_profile.get('age')}
+    - Retirement Age: {user_profile.get('retirement_age')}
+    - Current EPF Savings: RM {user_profile.get('current_savings')}
+    - Monthly Contribution: RM {user_profile.get('monthly_contribution')}
+    
+    Instructions:
+    - Explain simply, like talking to a friend. Avoid big financial words.
+    - Keep it SHORT and easy to read.
+    - Focus on what the numbers mean for their future.
+    
+    Formatting Rules (STRICT):
+    - Use bullet points.
+    - Do NOT use bold text.
+    - Use emojis sparingly (max 1 per point).
+    """
+    
+    # Add system prompt to history (Gemini 1.5 Pro/Flash supports system instructions, 
+    # but for simple chat history construction with `start_chat`, we can just prepend it or use it as context)
+    # Ideally we use system_instruction in GenerativeModel, but let's stick to a simple prompt injection for now.
+    
+    # Convert chat_history to Gemini format
+    # chat_history is expected to be list of {'role': 'user'|'model', 'parts': ['text']}
+    gemini_history = []
+    
+    # Add system context to the first user message or as a separate turn if needed.
+    # A simple way is to prepend the system prompt to the latest message if history is empty,
+    # or rely on the model to understand context from the conversation.
+    
+    if not chat_history:
+        # First message from user (implied trigger)
+        initial_prompt = f"{system_prompt}\n\nPlease analyze my retirement plan."
+        try:
+            response = model.generate_content(initial_prompt)
+            return response.text.strip()
+        except Exception as e:
+            print(f"Error generating advice: {e}")
+            return "Unable to generate advice at this time."
+            
+    else:
+        # Existing history
+        # We need to format it for start_chat
+        # Note: 'system' role is not standard in chat history for `start_chat` usually, 
+        # so we might just prepend context to the first message if we were rebuilding it,
+        # but here we just want to generate the NEXT response.
+        
+        # We will use `generate_content` with a constructed prompt of the whole conversation 
+        # OR use `start_chat`. `start_chat` is cleaner.
+        
+        formatted_history = []
+        # Prepend system prompt to the first message effectively by starting the chat with it?
+        # Actually, let's just use `start_chat` and send the system prompt as the first 'user' message if history is empty,
+        # but since we are stateless here, we rebuild the history.
+        
+        # Hack: Add system prompt as a "user" message at the start, followed by a "model" acknowledgement?
+        # Or just prepend it to the first user message.
+        
+        for i, msg in enumerate(chat_history):
+            role = 'user' if msg['role'] == 'user' else 'model'
+            text = msg['content']
+            if i == 0 and role == 'user':
+                text = system_prompt + "\n\n" + text
+            formatted_history.append({'role': role, 'parts': [text]})
+            
+        chat = model.start_chat(history=formatted_history)
+        
+        # The last message in chat_history should be the user's new input
+        # But wait, the view usually sends the *whole* history including the new message?
+        # Or the view sends history + new message.
+        # Let's assume the view sends the full list including the latest user message.
+        # So we need to pop the last message to send it to `send_message`.
+        
+        last_message = formatted_history.pop()
+        if last_message['role'] != 'user':
+            # Should not happen if logic is correct
+            return "Error: Last message was not from user."
+            
+        # Re-init chat with previous history
+        chat = model.start_chat(history=formatted_history)
+        
+        try:
+            response = chat.send_message(last_message['parts'][0])
+            return response.text.strip()
+        except Exception as e:
+            print(f"Error generating chat response: {e}")
+            return "Unable to generate response."

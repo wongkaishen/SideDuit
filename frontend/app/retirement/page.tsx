@@ -1,0 +1,334 @@
+"use client";
+
+import React, { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Loader2, Sparkles } from 'lucide-react';
+
+export default function RetirementPage() {
+    // --- State for Calculator ---
+    const [currentAge, setCurrentAge] = useState<number | string>(25);
+    const [retirementAge, setRetirementAge] = useState<number | string>(60);
+    const [currentSavings, setCurrentSavings] = useState<number | string>(10000);
+    const [monthlyContribution, setMonthlyContribution] = useState<number | string>(500);
+    const [interestRate, setInterestRate] = useState<number | string>(5.5); // EPF average roughly 5-6%
+
+    // --- State for AI Advisor ---
+    const [messages, setMessages] = useState<{ role: 'user' | 'model', content: string }[]>([]);
+    const [inputMessage, setInputMessage] = useState('');
+    const [isLoadingAi, setIsLoadingAi] = useState(false);
+    const [isChatStarted, setIsChatStarted] = useState(false);
+
+    // --- Calculations ---
+    const projectionData = useMemo(() => {
+        const data = [];
+        // Use 0 if value is empty string
+        let balance = Number(currentSavings) || 0;
+        const rAge = Number(retirementAge) || 60;
+        const cAge = Number(currentAge) || 25;
+        const mContrib = Number(monthlyContribution) || 0;
+        const iRate = Number(interestRate) || 0;
+
+        const yearsToRetire = rAge - cAge;
+        const currentYear = new Date().getFullYear();
+
+        for (let i = 0; i <= yearsToRetire; i++) {
+            data.push({
+                year: currentYear + i,
+                age: cAge + i,
+                balance: Math.round(balance),
+            });
+
+            // Add yearly contributions
+            balance += mContrib * 12;
+            // Add compound interest
+            balance += balance * (iRate / 100);
+        }
+        return data;
+    }, [currentAge, retirementAge, currentSavings, monthlyContribution, interestRate]);
+
+    const finalAmount = projectionData[projectionData.length - 1]?.balance || 0;
+
+    // --- AI Advisor Handler ---
+    const handleSendMessage = async (initial = false) => {
+        if (!initial && !inputMessage.trim()) return;
+
+        setIsLoadingAi(true);
+
+        // Construct new message list
+        let newMessages = [...messages];
+        if (!initial) {
+            newMessages.push({ role: 'user', content: inputMessage });
+            setMessages(newMessages);
+            setInputMessage('');
+        } else {
+            setIsChatStarted(true);
+        }
+
+        try {
+            const response = await fetch('http://127.0.0.1:8000/finance/retirement-advisor/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    age: Number(currentAge),
+                    current_savings: Number(currentSavings),
+                    monthly_contribution: Number(monthlyContribution),
+                    retirement_age: Number(retirementAge),
+                    messages: newMessages
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setMessages(prev => [...prev, { role: 'model', content: data.advice }]);
+            } else {
+                setMessages(prev => [...prev, { role: 'model', content: "Sorry, I encountered an error. Please try again." }]);
+            }
+        } catch (error) {
+            console.error("AI Error:", error);
+            setMessages(prev => [...prev, { role: 'model', content: "Error connecting to the financial advisor." }]);
+        } finally {
+            setIsLoadingAi(false);
+        }
+    };
+
+    // Helper to handle number input changes
+    const handleNumberChange = (setter: (val: number | string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        if (val === '') {
+            setter('');
+            return;
+        }
+
+        const num = Number(val);
+        // Prevent negative numbers
+        if (num < 0) return;
+
+        setter(num);
+    };
+
+    return (
+        <div className="min-h-screen bg-background p-4 md:p-8 pt-20 pb-24">
+            <div className="max-w-6xl mx-auto space-y-8">
+
+                {/* Header */}
+                <div>
+                    <h1 className="text-3xl font-bold text-[#059669]">Retirement Planner</h1>
+                    <p className="text-muted-foreground">Visualize your EPF growth and plan for a secure future.</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                    {/* Left Column: Controls */}
+                    <div className="lg:col-span-1 space-y-6 bg-card p-6 rounded-xl border shadow-sm h-fit">
+                        <h2 className="text-xl font-semibold mb-4">Configuration</h2>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Current Age (Min 16)</label>
+                                <input
+                                    type="number"
+                                    min={16}
+                                    value={currentAge}
+                                    onChange={handleNumberChange(setCurrentAge)}
+                                    className="w-full p-2 rounded-md border bg-background"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Retirement Age</label>
+                                <input
+                                    type="number"
+                                    min={Number(currentAge) + 1}
+                                    value={retirementAge}
+                                    onChange={handleNumberChange(setRetirementAge)}
+                                    className="w-full p-2 rounded-md border bg-background"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Current EPF Savings (RM)</label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    value={currentSavings}
+                                    onChange={handleNumberChange(setCurrentSavings)}
+                                    className="w-full p-2 rounded-md border bg-background"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Monthly Contribution (RM)</label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    value={monthlyContribution}
+                                    onChange={handleNumberChange(setMonthlyContribution)}
+                                    className="w-full p-2 rounded-md border bg-background"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Est. Annual Return (%)</label>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    min={0}
+                                    value={interestRate}
+                                    onChange={handleNumberChange(setInterestRate)}
+                                    className="w-full p-2 rounded-md border bg-background"
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">Avg EPF rate is ~5-6%</p>
+                            </div>
+                        </div>
+
+                        <div className="pt-4 border-t">
+                            <p className="text-sm text-muted-foreground">Projected Savings at {retirementAge}</p>
+                            <p className="text-3xl font-bold text-[#059669]">RM {finalAmount.toLocaleString()}</p>
+                        </div>
+                    </div>
+
+                    {/* Right Column: Graph & AI */}
+                    <div className="lg:col-span-2 space-y-8">
+
+                        {/* Graph Section */}
+                        <div className="bg-card p-6 rounded-xl border shadow-sm">
+                            <h2 className="text-xl font-semibold mb-6">Savings Projection</h2>
+                            <div className="h-[300px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart
+                                        data={projectionData}
+                                        margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
+                                    >
+                                        <defs>
+                                            <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                        <XAxis
+                                            dataKey="age"
+                                            label={{ value: 'Age', position: 'insideBottom', offset: -10, fill: '#666' }}
+                                            tick={{ fill: '#888', fontSize: 12 }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickMargin={10}
+                                        />
+                                        <YAxis
+                                            tickFormatter={(value) => `RM${value / 1000}k`}
+                                            tick={{ fill: '#888', fontSize: 12 }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickMargin={10}
+                                        />
+                                        <Tooltip content={({ active, payload, label }) => {
+                                            if (active && payload && payload.length) {
+                                                return (
+                                                    <div className="bg-card border border-border p-3 rounded-lg shadow-xl">
+                                                        <p className="text-muted-foreground text-xs mb-1">Age {label}</p>
+                                                        <p className="font-bold text-sm text-[#059669]">
+                                                            RM {Number(payload[0].value).toLocaleString()}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        }} />
+                                        <Legend verticalAlign="top" height={36} />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="balance"
+                                            stroke="#059669"
+                                            strokeWidth={3}
+                                            fillOpacity={1}
+                                            fill="url(#colorBalance)"
+                                            name="EPF Savings"
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* AI Chat Section */}
+                        <div className="bg-card p-6 rounded-xl border shadow-sm relative overflow-hidden flex flex-col min-h-[400px]">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                                <Sparkles className="w-24 h-24" />
+                            </div>
+
+                            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-yellow-400" />
+                                AI Retirement Advisor
+                            </h2>
+
+                            {!isChatStarted ? (
+                                <div className="flex flex-col items-center justify-center flex-1 text-center space-y-4">
+                                    <p className="text-muted-foreground">
+                                        Get personalized advice based on your current contributions and goals.
+                                    </p>
+                                    <button
+                                        onClick={() => handleSendMessage(true)}
+                                        className="bg-[#059669] text-primary-foreground px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2"
+                                    >
+                                        <Sparkles className="w-4 h-4" />
+                                        Generate Analysis
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col flex-1 h-[400px]">
+                                    {/* Chat History */}
+                                    <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+                                        {messages.map((msg, idx) => (
+                                            <motion.div
+                                                key={idx}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                            >
+                                                <div className={`max-w-[85%] p-3 rounded-lg ${msg.role === 'user'
+                                                    ? 'bg-[#059669] text-primary-foreground'
+                                                    : 'bg-muted/50 border border-white/10'
+                                                    }`}>
+                                                    <div className="prose prose-invert prose-sm max-w-none">
+                                                        <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                        {isLoadingAi && (
+                                            <div className="flex justify-start">
+                                                <div className="bg-muted/50 p-3 rounded-lg border border-white/10 flex items-center gap-2">
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    <span className="text-xs text-muted-foreground">Thinking...</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Input Area */}
+                                    <div className="flex gap-2 mt-auto pt-4 border-t border-white/10">
+                                        <input
+                                            type="text"
+                                            value={inputMessage}
+                                            onChange={(e) => setInputMessage(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                            placeholder="Ask a follow-up question..."
+                                            className="flex-1 bg-background border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#059669]"
+                                            disabled={isLoadingAi}
+                                        />
+                                        <button
+                                            onClick={() => handleSendMessage()}
+                                            disabled={!inputMessage.trim() || isLoadingAi}
+                                            className="bg-[#059669] text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Send
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

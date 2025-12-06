@@ -17,4 +17,6 @@ urlpatterns = [
     
     # DEPRECATED: Old Django models endpoint (kept for backwards compatibility)
     path('dashboard/', views.dashboard_summary, name='dashboard-summary-deprecated'),
+    path('retirement-advisor/', views.retirement_advisor_view, name='retirement_advisor'),
+    path('dashboard/', views.dashboard_summary, name='dashboard-summary'),
 ]

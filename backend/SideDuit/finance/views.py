@@ -1,12 +1,16 @@
 from django.shortcuts import render
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
-from .services import process_document, save_transactions_to_supabase, log_upload
+from .services import process_document, save_transactions_to_supabase, log_upload, chat_with_retirement_advisor
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from .supabase_utils import SupabaseFinancialCalculator
 from .rag import generate_rag_response
+import json
+from django.http import JsonResponse
+from django.contrib.auth.models import User
+from .utils import FinancialCalculator
 
 
 @csrf_exempt
@@ -66,7 +70,6 @@ def upload_view(request):
 def hello_world(request):
     """Health check endpoint"""
     return Response({"message": "Hello from Django SideDuit Backend!"})
-
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -157,5 +160,29 @@ def chat_rag(request):
         
         return Response(result)
         
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def retirement_advisor_view(request):
+    """
+    Generate AI retirement advice based on user input and chat history.
+    """
+    try:
+        data = json.loads(request.body)
+        
+        # User profile data
+        user_profile = {
+            'age': data.get('age'),
+            'current_savings': data.get('current_savings'),
+            'monthly_contribution': data.get('monthly_contribution'),
+            'retirement_age': data.get('retirement_age')
+        }
+        
+        # Chat history (list of {role: 'user'|'model', content: '...'})
+        chat_history = data.get('messages', [])
+        
+        advice = chat_with_retirement_advisor(user_profile, chat_history)
+        
+        return Response({"advice": advice})
     except Exception as e:
         return Response({"error": str(e)}, status=500)
