@@ -46,10 +46,6 @@ export const GlobalChatbot = () => {
         style={{ animationDuration: '3s' }}
       >
         <MessageCircle className="w-6 h-6 group-hover:rotate-12 transition-transform duration-300" />
-        {/* Notification badge if there's chat history */}
-        {typeof window !== 'undefined' && localStorage.getItem('sideduit_chat_history') && (
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></span>
-        )}
         {/* Ripple effect */}
         <span className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 animate-ping opacity-20"></span>
       </button>

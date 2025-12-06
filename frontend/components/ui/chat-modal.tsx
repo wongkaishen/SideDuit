@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Sparkles, Loader2, FileText, Trash2 } from 'lucide-react';
+import { X, Send, Sparkles, Loader2, FileText, Trash2, Plus, MessageSquare, Menu, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -20,14 +20,22 @@ interface ChatMessage {
   }>;
 }
 
+interface Conversation {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  last_message_at?: string;
+}
+
 interface ChatModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialQuery?: string;
 }
 
-// Local storage key for chat history
-const CHAT_HISTORY_KEY = 'sideduit_chat_history';
+const API_BASE = 'http://127.0.0.1:8000/finance/api';
 
 // Helper function to format timestamp
 const formatTimestamp = (timestamp: string): string => {
@@ -50,6 +58,10 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [showSidebar, setShowSidebar] = useState(true);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const initialQuerySentRef = useRef(false);
@@ -57,25 +69,123 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
   const backdropRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  // Load chat history from localStorage on mount
+  // Load conversations on mount
   useEffect(() => {
-    const savedHistory = localStorage.getItem(CHAT_HISTORY_KEY);
-    if (savedHistory) {
-      try {
-        const parsed = JSON.parse(savedHistory);
-        setMessages(parsed);
-      } catch (e) {
-        console.error('Error loading chat history:', e);
-      }
+    if (isOpen) {
+      loadConversations();
     }
-  }, []);
+  }, [isOpen]);
 
-  // Save messages to localStorage whenever they change
-  useEffect(() => {
-    if (messages.length > 0) {
-      localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages));
+  const loadConversations = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/conversations/?user_id=0&limit=50`);
+      if (response.ok) {
+        const data = await response.json();
+        setConversations(data.conversations || []);
+      }
+    } catch (error) {
+      console.error('Error loading conversations:', error);
     }
-  }, [messages]);
+  };
+
+  const createNewConversation = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/conversations/create/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: '0',
+          title: 'New Chat'
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const newConvId = data.conversation_id;
+        setCurrentConversationId(newConvId);
+        setMessages([]);
+        await loadConversations();
+        return newConvId;
+      } else {
+        console.error('Failed to create conversation:', response.status, response.statusText);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      return null;
+    }
+  };
+
+  const loadConversationMessages = async (conversationId: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/conversations/${conversationId}/messages/`);
+      if (response.ok) {
+        const data = await response.json();
+        const loadedMessages = data.messages.map((msg: any) => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.created_at,
+          sources: msg.sources || []
+        }));
+        setMessages(loadedMessages);
+        setCurrentConversationId(conversationId);
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    }
+  };
+
+  const saveMessageToDb = async (role: 'user' | 'assistant', content: string, sources: any[] = []) => {
+    if (!currentConversationId) return;
+    
+    try {
+      await fetch(`${API_BASE}/messages/save/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversation_id: currentConversationId,
+          role,
+          content,
+          sources
+        })
+      });
+    } catch (error) {
+      console.error('Error saving message:', error);
+    }
+  };
+
+  const updateConversationTitle = async (conversationId: string, title: string) => {
+    try {
+      await fetch(`${API_BASE}/conversations/${conversationId}/`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      });
+      await loadConversations();
+    } catch (error) {
+      console.error('Error updating conversation title:', error);
+    }
+  };
+
+  const deleteConversation = async (conversationId: string) => {
+    if (!confirm('Are you sure you want to delete this conversation?')) return;
+    
+    try {
+      const response = await fetch(`${API_BASE}/conversations/${conversationId}/delete/`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        if (currentConversationId === conversationId) {
+          setCurrentConversationId(null);
+          setMessages([]);
+        }
+        await loadConversations();
+      }
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+    }
+  };
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -132,6 +242,16 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
     
     if (!query || isLoading) return;
 
+    // Create conversation if doesn't exist
+    let convId = currentConversationId;
+    if (!convId) {
+      convId = await createNewConversation();
+      if (!convId) {
+        // Show error but don't return - still try to get AI response
+        console.error('Failed to create conversation, messages will not be saved');
+      }
+    }
+
     // Add user message with timestamp
     const userMessage: ChatMessage = { 
       role: 'user', 
@@ -142,9 +262,20 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
     setInput('');
     setIsLoading(true);
 
+    // Save user message to DB (only if we have a conversation ID)
+    if (convId) {
+      await saveMessageToDb('user', query);
+
+      // Auto-generate title from first message
+      if (messages.length === 0) {
+        const title = query.slice(0, 50) + (query.length > 50 ? '...' : '');
+        await updateConversationTitle(convId, title);
+      }
+    }
+
     try {
       // Call RAG API
-      const response = await fetch('http://127.0.0.1:8000/finance/api/chat/', {
+      const response = await fetch(`${API_BASE}/chat/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -170,6 +301,12 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      
+      // Save assistant message to DB (only if we have a conversation ID)
+      if (convId) {
+        await saveMessageToDb('assistant', data.response, data.sources);
+        await loadConversations(); // Refresh conversation list
+      }
     } catch (error) {
       console.error('Error sending chat message:', error);
       
@@ -186,9 +323,20 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
   };
 
   const handleClearHistory = () => {
-    if (confirm('Are you sure you want to clear all chat history?')) {
+    if (confirm('Are you sure you want to clear the current chat?')) {
       setMessages([]);
-      localStorage.removeItem(CHAT_HISTORY_KEY);
+      setCurrentConversationId(null);
+    }
+  };
+
+  const handleNewChat = async () => {
+    const convId = await createNewConversation();
+    if (convId) {
+      setMessages([]);
+      // Only hide sidebar on mobile
+      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+        setShowSidebar(false);
+      }
     }
   };
 
@@ -286,18 +434,90 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
       />
 
       {/* Modal Container - Glassmorphism */}
-      <div ref={modalRef} className="relative w-full max-w-4xl h-[600px] flex flex-col rounded-3xl overflow-hidden shadow-2xl">
+      <div ref={modalRef} className="relative w-full max-w-6xl h-[600px] flex rounded-3xl overflow-hidden shadow-2xl">
         {/* Glassmorphism background */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/90 via-white/80 to-white/70 backdrop-blur-xl" />
         
         {/* Animated gradient border */}
         <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 opacity-30 blur-xl animate-pulse" />
         
-        {/* Content */}
-        <div className="relative z-10 flex flex-col h-full">
+        {/* Sidebar - Chat History */}
+        <div className={cn(
+          "relative z-10 w-72 border-r border-white/20 bg-white/40 flex-col transition-all duration-300",
+          showSidebar ? "flex" : "hidden lg:flex"
+        )}>
+          <div className="p-4 border-b border-white/20">
+            <button
+              onClick={handleNewChat}
+              className="w-full flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="text-sm font-medium">New Chat</span>
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            <h3 className="text-xs font-semibold text-[#00001c]/60 mb-2 px-2">Recent Conversations</h3>
+            {conversations.map((conv) => (
+              <div
+                key={conv.id}
+                className={cn(
+                  "group p-3 rounded-xl cursor-pointer transition-all hover:bg-white/60",
+                  currentConversationId === conv.id ? "bg-white/80 shadow-md" : "bg-white/40"
+                )}
+                onClick={() => {
+                  loadConversationMessages(conv.id);
+                  // Only hide sidebar on mobile
+                  if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                    setShowSidebar(false);
+                  }
+                }}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[#00001c] truncate">
+                      {conv.title}
+                    </p>
+                    <p className="text-xs text-[#00001c]/60 mt-1">
+                      {conv.message_count} messages
+                    </p>
+                    {conv.last_message_at && (
+                      <p className="text-xs text-[#00001c]/40 mt-1">
+                        {formatTimestamp(conv.last_message_at)}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteConversation(conv.id);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all"
+                  >
+                    <Trash2 className="w-3 h-3 text-red-600" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {conversations.length === 0 && (
+              <p className="text-sm text-[#00001c]/40 text-center py-8">
+                No conversations yet
+              </p>
+            )}
+          </div>
+        </div>
+        
+        {/* Main Chat Area */}
+        <div className="relative z-10 flex flex-col flex-1">
           {/* Header */}
           <div className="modal-header flex items-center justify-between p-6 border-b border-white/20 bg-white/40">
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowSidebar(!showSidebar)}
+                className="p-2 hover:bg-black/5 rounded-full transition-colors lg:hidden"
+              >
+                {showSidebar ? <ChevronLeft className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
               <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl shadow-lg">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
@@ -309,11 +529,18 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={handleNewChat}
+                className="p-2 hover:bg-green-100 rounded-full transition-colors group hidden lg:block"
+                title="New chat"
+              >
+                <Plus className="w-4 h-4 text-[#00001c]/60 group-hover:text-green-600" />
+              </button>
               {messages.length > 0 && (
                 <button
                   onClick={handleClearHistory}
                   className="p-2 hover:bg-red-100 rounded-full transition-colors group"
-                  title="Clear chat history"
+                  title="Clear current chat"
                 >
                   <Trash2 className="w-4 h-4 text-[#00001c]/60 group-hover:text-red-600" />
                 </button>
@@ -342,7 +569,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
                   Try asking me about your expenses or income!
                 </p>
                 <p className="text-xs text-[#00001c]/40 max-w-md">
-                  💾 Your chat history is saved locally and will persist across sessions
+                  💾 Your conversations are saved and can be accessed from the sidebar
                 </p>
                 
                 {/* Suggested Questions */}

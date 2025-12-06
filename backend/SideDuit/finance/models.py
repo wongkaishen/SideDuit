@@ -1,4 +1,4 @@
-# NOTE: We use Supabase PostgreSQL database directly for all data storage
+ # NOTE: We use Supabase PostgreSQL database directly for all data storage
 # Django models are not used for Income/Expense tracking
 # All data is stored in Supabase tables: transactions, update_logs
 #

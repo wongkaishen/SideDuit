@@ -188,3 +188,331 @@ def retirement_advisor_view(request):
         return Response({"advice": advice})
     except Exception as e:
         return Response({"error": str(e)}, status=500)
+
+
+# Chat Conversation Management Endpoints
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_conversation(request):
+    """
+    Create a new conversation.
+    
+    POST body:
+    {
+        "user_id": "optional_user_id",
+        "title": "New Chat" (optional)
+    }
+    
+    Returns:
+    {
+        "conversation_id": "uuid",
+        "created_at": "timestamp"
+    }
+    """
+    from .db_pool import get_db_connection, release_db_connection
+    
+    try:
+        user_id = request.data.get('user_id', None)
+        title = request.data.get('title', 'New Chat')
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            INSERT INTO conversations (user_id, title)
+            VALUES (%s, %s)
+            RETURNING id, created_at
+        """, [user_id, title])
+        
+        result = cur.fetchone()
+        conn.commit()
+        
+        release_db_connection(conn)
+        
+        return Response({
+            "conversation_id": str(result[0]),
+            "created_at": result[1].isoformat()
+        })
+    except Exception as e:
+        if conn:
+            release_db_connection(conn)
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_conversations(request):
+    """
+    Get all conversations for a user.
+    
+    Query params:
+    - user_id: Filter by user (optional)
+    - limit: Number of conversations to return (default: 50)
+    - include_archived: Include archived conversations (default: false)
+    
+    Returns:
+    {
+        "conversations": [
+            {
+                "id": "uuid",
+                "title": "Chat title",
+                "created_at": "timestamp",
+                "updated_at": "timestamp",
+                "message_count": 10,
+                "last_message_at": "timestamp"
+            }
+        ]
+    }
+    """
+    from .db_pool import get_db_connection, release_db_connection
+    
+    try:
+        user_id = request.GET.get('user_id', None)
+        limit = int(request.GET.get('limit', 50))
+        include_archived = request.GET.get('include_archived', 'false').lower() == 'true'
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        query = """
+            SELECT 
+                c.id,
+                c.user_id,
+                c.title,
+                c.created_at,
+                c.updated_at,
+                c.is_archived,
+                COUNT(m.id) as message_count,
+                MAX(m.created_at) as last_message_at
+            FROM conversations c
+            LEFT JOIN messages m ON c.id = m.conversation_id
+            WHERE 1=1
+        """
+        params = []
+        
+        if user_id:
+            query += " AND c.user_id = %s"
+            params.append(user_id)
+        
+        if not include_archived:
+            query += " AND c.is_archived = false"
+        
+        query += """
+            GROUP BY c.id, c.user_id, c.title, c.created_at, c.updated_at, c.is_archived
+            ORDER BY c.updated_at DESC
+            LIMIT %s
+        """
+        params.append(limit)
+        
+        cur.execute(query, params)
+        results = cur.fetchall()
+        
+        conversations = []
+        for row in results:
+            conversations.append({
+                "id": str(row[0]),
+                "user_id": row[1],
+                "title": row[2],
+                "created_at": row[3].isoformat() if row[3] else None,
+                "updated_at": row[4].isoformat() if row[4] else None,
+                "is_archived": row[5],
+                "message_count": row[6],
+                "last_message_at": row[7].isoformat() if row[7] else None
+            })
+        
+        release_db_connection(conn)
+        
+        return Response({"conversations": conversations})
+    except Exception as e:
+        if conn:
+            release_db_connection(conn)
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_conversation_messages(request, conversation_id):
+    """
+    Get all messages for a specific conversation.
+    
+    Returns:
+    {
+        "messages": [
+            {
+                "id": "uuid",
+                "role": "user|assistant",
+                "content": "message text",
+                "created_at": "timestamp",
+                "sources": []
+            }
+        ]
+    }
+    """
+    from .db_pool import get_db_connection, release_db_connection
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT id, role, content, created_at, sources
+            FROM messages
+            WHERE conversation_id = %s
+            ORDER BY created_at ASC
+        """, [conversation_id])
+        
+        results = cur.fetchall()
+        
+        messages = []
+        for row in results:
+            messages.append({
+                "id": str(row[0]),
+                "role": row[1],
+                "content": row[2],
+                "created_at": row[3].isoformat() if row[3] else None,
+                "sources": row[4] if row[4] else []
+            })
+        
+        release_db_connection(conn)
+        
+        return Response({"messages": messages})
+    except Exception as e:
+        if conn:
+            release_db_connection(conn)
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def save_message(request):
+    """
+    Save a message to a conversation.
+    
+    POST body:
+    {
+        "conversation_id": "uuid",
+        "role": "user|assistant",
+        "content": "message text",
+        "sources": [] (optional)
+    }
+    
+    Returns:
+    {
+        "message_id": "uuid",
+        "created_at": "timestamp"
+    }
+    """
+    from .db_pool import get_db_connection, release_db_connection
+    
+    try:
+        conversation_id = request.data.get('conversation_id')
+        role = request.data.get('role')
+        content = request.data.get('content')
+        sources = request.data.get('sources', [])
+        
+        if not all([conversation_id, role, content]):
+            return Response({"error": "conversation_id, role, and content are required"}, status=400)
+        
+        if role not in ['user', 'assistant']:
+            return Response({"error": "role must be 'user' or 'assistant'"}, status=400)
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            INSERT INTO messages (conversation_id, role, content, sources)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id, created_at
+        """, [conversation_id, role, content, json.dumps(sources)])
+        
+        result = cur.fetchone()
+        conn.commit()
+        
+        release_db_connection(conn)
+        
+        return Response({
+            "message_id": str(result[0]),
+            "created_at": result[1].isoformat()
+        })
+    except Exception as e:
+        if conn:
+            release_db_connection(conn)
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def update_conversation(request, conversation_id):
+    """
+    Update a conversation (title, archive status, etc.).
+    
+    PUT body:
+    {
+        "title": "New title" (optional),
+        "is_archived": true|false (optional)
+    }
+    """
+    from .db_pool import get_db_connection, release_db_connection
+    
+    try:
+        title = request.data.get('title')
+        is_archived = request.data.get('is_archived')
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        updates = []
+        params = []
+        
+        if title is not None:
+            updates.append("title = %s")
+            params.append(title)
+        
+        if is_archived is not None:
+            updates.append("is_archived = %s")
+            params.append(is_archived)
+        
+        if not updates:
+            return Response({"error": "No fields to update"}, status=400)
+        
+        params.append(conversation_id)
+        query = f"UPDATE conversations SET {', '.join(updates)} WHERE id = %s RETURNING updated_at"
+        
+        cur.execute(query, params)
+        result = cur.fetchone()
+        conn.commit()
+        
+        release_db_connection(conn)
+        
+        return Response({
+            "updated_at": result[0].isoformat() if result else None
+        })
+    except Exception as e:
+        if conn:
+            release_db_connection(conn)
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def delete_conversation(request, conversation_id):
+    """
+    Delete a conversation and all its messages.
+    """
+    from .db_pool import get_db_connection, release_db_connection
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("DELETE FROM conversations WHERE id = %s", [conversation_id])
+        conn.commit()
+        
+        release_db_connection(conn)
+        
+        return Response({"success": True})
+    except Exception as e:
+        if conn:
+            release_db_connection(conn)
+        return Response({"error": str(e)}, status=500)
