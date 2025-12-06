@@ -3,6 +3,7 @@
 import React from 'react';
 import { FinancialDashboard } from '@/components/ui/financial-dashboard';
 import { TextEffect } from '@/components/ui/text-effect';
+import { ChatBot } from '@/components/ui/chatbot';
 
 // Import Lucide icons for the demo
 import {
@@ -15,6 +16,8 @@ import {
   Target,
   TrendingUp,
   Users,
+  FileText,
+  Zap,
 } from 'lucide-react';
 
 // --- Fallback Icon for Logo ---
@@ -34,13 +37,25 @@ const LogoIcon = ({
 
 // --- DEMO DATA ---
 const quickActionsData = [
-  { icon: ArrowLeftRight, title: 'Transfer', description: 'Send Money' },
-  { icon: Landmark, title: 'Pay', description: 'Bills & Payments' },
-  { icon: TrendingUp, title: 'Invest', description: 'Grow Wealth' },
-  { icon: CreditCard, title: 'Cards', description: 'Manage Cards' },
+  { icon: ArrowLeftRight, title: 'Transfer', description: 'Send Money', href: '/transfer' },
+  { icon: Landmark, title: 'Pay', description: 'Bills & Payments', href: '/pay' },
+  { icon: TrendingUp, title: 'Invest', description: 'Grow Wealth', href: '/invest' },
+  { icon: CreditCard, title: 'Cards', description: 'Manage Cards', href: '/cards' },
 ];
 
 const recentActivityData = [
+  {
+    icon: FileText,
+    title: 'Grab Earnings (OCR)',
+    time: 'Processed 5 mins ago',
+    amount: 142.50,
+  },
+  {
+    icon: Zap,
+    title: 'Electric Bill',
+    time: 'Yesterday, 8:30 PM',
+    amount: -84.20,
+  },
   {
     icon: <LogoIcon letter="N" className="bg-red-600" />,
     title: 'Netflix Subscription',
@@ -53,12 +68,6 @@ const recentActivityData = [
     time: '1 day ago',
     amount: 3450.0,
   },
-  {
-    icon: LineChart,
-    title: 'Investment Transfer',
-    time: '2 days ago',
-    amount: -500.0,
-  },
 ];
 
 const financialServicesData = [
@@ -67,6 +76,7 @@ const financialServicesData = [
     title: 'Wealth Management',
     description: 'Investment portfolios & advisory',
     isPremium: true,
+    href: '/invest',
   },
   {
     icon: Target,
@@ -100,7 +110,7 @@ export default function FinancialDashboardDemo() {
         <TextEffect
           per='char'
           preset='fade'
-          className="text-sm font-medium tracking-widest text-[#00ff7f] uppercase"
+          className="text-sm font-medium tracking-widest text-[#00001c] uppercase"
         >
           AI Powered Financial Tracker
         </TextEffect>
@@ -111,6 +121,7 @@ export default function FinancialDashboardDemo() {
         financialServices={financialServicesData}
         summary={summaryData}
       />
+      <ChatBot />
     </div>
   );
 }
