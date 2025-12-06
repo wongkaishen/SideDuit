@@ -222,7 +222,11 @@ def generate_retirement_plan(age, current_savings, monthly_contribution, retirem
     2. Provide specific advice on whether they should increase contributions.
     3. Suggest 2-3 actionable tips for gig workers to save more (e.g., i-Saraan).
     
-    Keep the response concise (under 150 words), encouraging, and formatted as a single paragraph or short bullet points.
+    Formatting Rules:
+    - Use bullet points for the tips.
+    - Do NOT use bold text (markdown ** or __).
+    - Use emojis sparingly (max 1 per point).
+    - Keep it concise and encouraging.
     """
     
     try:

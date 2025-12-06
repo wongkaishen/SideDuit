@@ -7,11 +7,11 @@ import { Loader2, Sparkles } from 'lucide-react';
 
 export default function RetirementPage() {
     // --- State for Calculator ---
-    const [currentAge, setCurrentAge] = useState(25);
-    const [retirementAge, setRetirementAge] = useState(60);
-    const [currentSavings, setCurrentSavings] = useState(10000);
-    const [monthlyContribution, setMonthlyContribution] = useState(500);
-    const [interestRate, setInterestRate] = useState(5.5); // EPF average roughly 5-6%
+    const [currentAge, setCurrentAge] = useState<number | string>(25);
+    const [retirementAge, setRetirementAge] = useState<number | string>(60);
+    const [currentSavings, setCurrentSavings] = useState<number | string>(10000);
+    const [monthlyContribution, setMonthlyContribution] = useState<number | string>(500);
+    const [interestRate, setInterestRate] = useState<number | string>(5.5); // EPF average roughly 5-6%
 
     // --- State for AI Advisor ---
     const [aiAdvice, setAiAdvice] = useState<string | null>(null);
@@ -20,21 +20,27 @@ export default function RetirementPage() {
     // --- Calculations ---
     const projectionData = useMemo(() => {
         const data = [];
-        let balance = currentSavings;
-        const yearsToRetire = retirementAge - currentAge;
+        // Use 0 if value is empty string
+        let balance = Number(currentSavings) || 0;
+        const rAge = Number(retirementAge) || 60;
+        const cAge = Number(currentAge) || 25;
+        const mContrib = Number(monthlyContribution) || 0;
+        const iRate = Number(interestRate) || 0;
+
+        const yearsToRetire = rAge - cAge;
         const currentYear = new Date().getFullYear();
 
         for (let i = 0; i <= yearsToRetire; i++) {
             data.push({
                 year: currentYear + i,
-                age: currentAge + i,
+                age: cAge + i,
                 balance: Math.round(balance),
             });
 
             // Add yearly contributions
-            balance += monthlyContribution * 12;
+            balance += mContrib * 12;
             // Add compound interest
-            balance += balance * (interestRate / 100);
+            balance += balance * (iRate / 100);
         }
         return data;
     }, [currentAge, retirementAge, currentSavings, monthlyContribution, interestRate]);
@@ -52,10 +58,10 @@ export default function RetirementPage() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    age: currentAge,
-                    current_savings: currentSavings,
-                    monthly_contribution: monthlyContribution,
-                    retirement_age: retirementAge,
+                    age: Number(currentAge),
+                    current_savings: Number(currentSavings),
+                    monthly_contribution: Number(monthlyContribution),
+                    retirement_age: Number(retirementAge),
                     // In a real app, we'd fetch actual income/expenses from DB too
                     // For now, we'll let the backend infer or just use these params
                 }),
@@ -73,6 +79,21 @@ export default function RetirementPage() {
         } finally {
             setIsLoadingAi(false);
         }
+    };
+
+    // Helper to handle number input changes
+    const handleNumberChange = (setter: (val: number | string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        if (val === '') {
+            setter('');
+            return;
+        }
+
+        const num = Number(val);
+        // Prevent negative numbers
+        if (num < 0) return;
+
+        setter(num);
     };
 
     return (
@@ -93,11 +114,12 @@ export default function RetirementPage() {
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium mb-1">Current Age</label>
+                                <label className="block text-sm font-medium mb-1">Current Age (Min 16)</label>
                                 <input
                                     type="number"
+                                    min={16}
                                     value={currentAge}
-                                    onChange={(e) => setCurrentAge(Number(e.target.value))}
+                                    onChange={handleNumberChange(setCurrentAge)}
                                     className="w-full p-2 rounded-md border bg-background"
                                 />
                             </div>
@@ -105,8 +127,9 @@ export default function RetirementPage() {
                                 <label className="block text-sm font-medium mb-1">Retirement Age</label>
                                 <input
                                     type="number"
+                                    min={Number(currentAge) + 1}
                                     value={retirementAge}
-                                    onChange={(e) => setRetirementAge(Number(e.target.value))}
+                                    onChange={handleNumberChange(setRetirementAge)}
                                     className="w-full p-2 rounded-md border bg-background"
                                 />
                             </div>
@@ -114,8 +137,9 @@ export default function RetirementPage() {
                                 <label className="block text-sm font-medium mb-1">Current EPF Savings (RM)</label>
                                 <input
                                     type="number"
+                                    min={0}
                                     value={currentSavings}
-                                    onChange={(e) => setCurrentSavings(Number(e.target.value))}
+                                    onChange={handleNumberChange(setCurrentSavings)}
                                     className="w-full p-2 rounded-md border bg-background"
                                 />
                             </div>
@@ -123,8 +147,9 @@ export default function RetirementPage() {
                                 <label className="block text-sm font-medium mb-1">Monthly Contribution (RM)</label>
                                 <input
                                     type="number"
+                                    min={0}
                                     value={monthlyContribution}
-                                    onChange={(e) => setMonthlyContribution(Number(e.target.value))}
+                                    onChange={handleNumberChange(setMonthlyContribution)}
                                     className="w-full p-2 rounded-md border bg-background"
                                 />
                             </div>
@@ -133,8 +158,9 @@ export default function RetirementPage() {
                                 <input
                                     type="number"
                                     step="0.1"
+                                    min={0}
                                     value={interestRate}
-                                    onChange={(e) => setInterestRate(Number(e.target.value))}
+                                    onChange={handleNumberChange(setInterestRate)}
                                     className="w-full p-2 rounded-md border bg-background"
                                 />
                                 <p className="text-xs text-muted-foreground mt-1">Avg EPF rate is ~5-6%</p>
