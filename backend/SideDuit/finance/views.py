@@ -159,6 +159,8 @@ def chat_rag(request):
         result = generate_rag_response(query, user_id)
         
         return Response(result)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
         
 @csrf_exempt
 @api_view(['POST'])
