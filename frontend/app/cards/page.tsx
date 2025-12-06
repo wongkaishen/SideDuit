@@ -120,7 +120,7 @@ export default function CardsPage() {
                             <div className="flex justify-between items-start z-10">
                                 <div>
                                     <p className="opacity-70 text-sm font-medium">Current Balance</p>
-                                    <p className="text-3xl font-bold font-mono">${card.balance.toLocaleString()}</p>
+                                    <p className="text-3xl font-bold font-mono">RM {card.balance.toLocaleString()}</p>
                                 </div>
                                 <CreditCard className="opacity-50 w-8 h-8" />
                             </div>
@@ -168,7 +168,7 @@ export default function CardsPage() {
                                             <p className="text-xs text-muted-foreground">{t.date}</p>
                                         </div>
                                     </div>
-                                    <span className="font-bold text-[#00001c]">${Math.abs(t.amount).toFixed(2)}</span>
+                                    <span className="font-bold text-[#00001c]">RM {Math.abs(t.amount).toFixed(2)}</span>
                                 </div>
                             )
                         })}

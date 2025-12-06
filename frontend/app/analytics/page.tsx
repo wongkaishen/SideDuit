@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Navbar } from '@/components/ui/navbar';
+import { Sparkline } from '@/components/ui/sparkline';
 
 export default function AnalyticsPage() {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -25,7 +26,7 @@ export default function AnalyticsPage() {
 
     // Mock Data for Months
     const months = ["May", "June", "July"];
-    const monthlyStats: Record<string, { income: any[], expenses: any[], totalIncome: number, totalExpense: number, netProfit: number }> = {
+    const monthlyStats: Record<string, { income: any[], expenses: any[], totalIncome: number, totalExpense: number, netProfit: number, incomeTrend: number[], expenseTrend: number[], taxProgress: number }> = {
         "May": {
             income: [
                 { name: "Grab Earnings", icon: Bike, amount: 2100.00, color: "bg-[#00b14f]", width: "75%" },
@@ -41,7 +42,10 @@ export default function AnalyticsPage() {
             ],
             totalIncome: 4030.50,
             totalExpense: 1250.00,
-            netProfit: 2780.50
+            netProfit: 2780.50,
+            incomeTrend: [150, 230, 210, 320, 290, 400, 380],
+            expenseTrend: [100, 80, 120, 90, 150, 130, 110],
+            taxProgress: 35
         },
         "June": {
             income: [
@@ -58,7 +62,10 @@ export default function AnalyticsPage() {
             ],
             totalIncome: 4450.00,
             totalExpense: 1270.00,
-            netProfit: 3180.00
+            netProfit: 3180.00,
+            incomeTrend: [300, 350, 320, 400, 420, 450, 500],
+            expenseTrend: [120, 110, 130, 140, 120, 150, 160],
+            taxProgress: 40
         },
         "July": {
             income: [
@@ -75,7 +82,10 @@ export default function AnalyticsPage() {
             ],
             totalIncome: 4960.70,
             totalExpense: 1540.00,
-            netProfit: 3420.70
+            netProfit: 3420.70,
+            incomeTrend: [400, 380, 450, 420, 480, 520, 600],
+            expenseTrend: [200, 180, 220, 250, 230, 280, 300],
+            taxProgress: 45
         }
     };
 
@@ -84,14 +94,17 @@ export default function AnalyticsPage() {
     useGSAP(() => {
         // Selectors
         const header = '.analytics-header';
+        const summaryCards = '.summary-card'; // New
         const incomeCard = '.income-card';
         const expenseCard = '.expense-card';
         const incomeBars = gsap.utils.toArray<HTMLElement>('.income-bar');
         const expenseDonuts = gsap.utils.toArray<HTMLElement>('.expense-item');
         const numbers = gsap.utils.toArray<HTMLElement>('.scramble-val');
+        const taxBar = '.tax-progress-bar'; // New
 
         // 1. Initial State (Hidden & Twisted)
         gsap.set(header, { autoAlpha: 0, y: -50 });
+        gsap.set(summaryCards, { autoAlpha: 0, y: 30, scale: 0.95 });
         gsap.set([incomeCard, expenseCard], {
             autoAlpha: 0,
             y: 100,
@@ -102,6 +115,7 @@ export default function AnalyticsPage() {
         });
         gsap.set(incomeBars, { width: 0 });
         gsap.set(expenseDonuts, { autoAlpha: 0, x: 20 });
+        gsap.set(taxBar, { width: 0 });
 
         // 2. Header Entry
         gsap.to(header, {
@@ -111,9 +125,28 @@ export default function AnalyticsPage() {
             ease: "expo.out"
         });
 
-        // 3. Cards Explosion
+        // 3. Summary Cards Entry
+        gsap.to(summaryCards, {
+            delay: 0.3,
+            duration: 0.8,
+            autoAlpha: 1,
+            y: 0,
+            scale: 1,
+            stagger: 0.1,
+            ease: "back.out(1.5)"
+        });
+
+        // 4. Tax Bar Fill
+        gsap.to(taxBar, {
+            delay: 0.6,
+            duration: 1.5,
+            width: (i, target) => target.dataset.width,
+            ease: "power2.out"
+        });
+
+        // 5. Cards Explosion
         gsap.to([incomeCard, expenseCard], {
-            delay: 0.2,
+            delay: 0.5, // Delayed slightly more
             duration: 1.4,
             autoAlpha: 1,
             y: 0,
@@ -124,18 +157,18 @@ export default function AnalyticsPage() {
             stagger: 0.2
         });
 
-        // 4. Bar Chart Animation
+        // 6. Bar Chart Animation
         gsap.to(incomeBars, {
-            delay: 0.8,
+            delay: 1.0,
             duration: 1.5,
             width: (i, target) => target.dataset.width,
             ease: "power4.out",
             stagger: 0.1
         });
 
-        // 5. Expense Items Stagger
+        // 7. Expense Items Stagger
         gsap.to(expenseDonuts, {
-            delay: 1,
+            delay: 1.2,
             duration: 0.8,
             autoAlpha: 1,
             x: 0,
@@ -143,7 +176,7 @@ export default function AnalyticsPage() {
             stagger: 0.1
         });
 
-        // 6. Number Scramble
+        // 8. Number Scramble
         numbers.forEach(el => {
             const raw = el.dataset.value;
             if (!raw) return;
@@ -155,7 +188,7 @@ export default function AnalyticsPage() {
                 duration: 2,
                 ease: "power2.out",
                 onUpdate: () => {
-                    el.innerText = '$' + obj.val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    el.innerText = 'RM ' + obj.val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 }
             });
         });
@@ -166,6 +199,7 @@ export default function AnalyticsPage() {
     useGSAP(() => {
         const numbers = gsap.utils.toArray<HTMLElement>('.scramble-val');
         const incomeBars = gsap.utils.toArray<HTMLElement>('.income-bar');
+        const taxBar = document.querySelector('.tax-progress-bar');
 
         // Animate Bars to new width
         gsap.to(incomeBars, {
@@ -173,6 +207,15 @@ export default function AnalyticsPage() {
             duration: 1,
             ease: "elastic.out(1, 0.7)"
         });
+
+        // Animate Tax Bar
+        if (taxBar) {
+            gsap.to(taxBar, {
+                width: `${currentData.taxProgress}%`,
+                duration: 1.2,
+                ease: "power2.inOut"
+            });
+        }
 
         // Re-scramble Numbers
         numbers.forEach(el => scrambleNumber(el));
@@ -190,7 +233,7 @@ export default function AnalyticsPage() {
             duration: 1.5,
             ease: "power2.out",
             onUpdate: () => {
-                el.innerText = '$' + obj.val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                el.innerText = 'RM ' + obj.val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
         });
     };
@@ -227,6 +270,76 @@ export default function AnalyticsPage() {
                     </div>
                 </div>
 
+                {/* VISUAL METRICS SUMMARY (NEW) */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    {/* Income Summary */}
+                    <div className="summary-card bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow relative overflow-hidden">
+                        <div className="flex justify-between items-start mb-2">
+                            <div>
+                                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Total Income</p>
+                                <p className="text-2xl font-bold text-[#00001c] mt-1 scramble-val" data-value={currentData.totalIncome}>RM 0.00</p>
+                            </div>
+                            <div className="bg-[#00ff7f]/10 p-2 rounded-full">
+                                <TrendingUp className="w-4 h-4 text-[#00b14f]" />
+                            </div>
+                        </div>
+                        {/* Sparkline */}
+                        <div className="mt-4 h-12 w-full">
+                            <Sparkline data={currentData.incomeTrend} color="#00b14f" height={40} strokeWidth={3} />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">Last 7 Days Trend</p>
+                    </div>
+
+                    {/* Expense Summary */}
+                    <div className="summary-card bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow relative overflow-hidden">
+                        <div className="flex justify-between items-start mb-2">
+                            <div>
+                                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Total Expenses</p>
+                                <p className="text-2xl font-bold text-[#00001c] mt-1 scramble-val" data-value={currentData.totalExpense}>RM 0.00</p>
+                            </div>
+                            <div className="bg-red-500/10 p-2 rounded-full">
+                                <TrendingDown className="w-4 h-4 text-red-500" />
+                            </div>
+                        </div>
+                        {/* Sparkline */}
+                        <div className="mt-4 h-12 w-full">
+                            <Sparkline data={currentData.expenseTrend} color="#ef4444" height={40} strokeWidth={3} />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">Last 7 Days Trend</p>
+                    </div>
+
+                    {/* Tax Progress Summary */}
+                    <div className="summary-card bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow relative overflow-hidden">
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Tax Liability</p>
+                                <h3 className="text-lg font-bold text-[#00001c] mt-1">Status: Active</h3>
+                            </div>
+                            <div className="bg-amber-500/10 p-2 rounded-full">
+                                <DollarSign className="w-4 h-4 text-amber-500" />
+                            </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="mt-2">
+                            <div className="flex justify-between text-xs font-semibold mb-1">
+                                <span className="text-amber-600">Tax threshold reached</span>
+                                <span className="text-amber-600">{currentData.taxProgress}%</span>
+                            </div>
+                            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                    className="tax-progress-bar h-full bg-amber-500 rounded-full relative"
+                                    data-width={`${currentData.taxProgress}%`}
+                                    style={{ width: 0 }}
+                                >
+                                    <div className="absolute top-0 right-0 bottom-0 w-20 bg-gradient-to-r from-transparent to-white/30 animate-pulse" />
+                                </div>
+                            </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-4">Estimated set aside: RM {(currentData.totalIncome * 0.15).toFixed(2)}</p>
+                    </div>
+                </div>
+
                 {/* Main Grid */}
                 <div className="grid lg:grid-cols-2 gap-8">
 
@@ -243,7 +356,7 @@ export default function AnalyticsPage() {
                                 <p className="text-white/50 text-sm">Monthly Earnings by Platform</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-3xl font-bold font-mono text-[#00ff7f] scramble-val" data-value={currentData.totalIncome}>$0.00</p>
+                                <p className="text-3xl font-bold font-mono text-[#00ff7f] scramble-val" data-value={currentData.totalIncome}>RM 0.00</p>
                                 <p className="text-xs text-white/50 uppercase tracking-widest">Total Income</p>
                             </div>
                         </div>
@@ -261,7 +374,7 @@ export default function AnalyticsPage() {
                                             <source.icon className={cn("w-4 h-4", hoveredIndex === i ? "text-white" : "text-white/60")} />
                                             <span className="font-medium">{source.name}</span>
                                         </div>
-                                        <span className="font-mono opacity-80">${source.amount.toLocaleString()}</span>
+                                        <span className="font-mono opacity-80">RM {source.amount.toLocaleString()}</span>
                                     </div>
                                     <div className="h-3 bg-white/10 rounded-full overflow-hidden">
                                         <div
@@ -285,7 +398,7 @@ export default function AnalyticsPage() {
                                 <p className="text-muted-foreground text-sm">Operational Costs & Spending</p>
                             </div>
                             <div className="bg-red-500/10 px-4 py-2 rounded-xl">
-                                <p className="text-xl font-bold text-red-600 scramble-val" data-value={currentData.totalExpense}>$0.00</p>
+                                <p className="text-xl font-bold text-red-600 scramble-val" data-value={currentData.totalExpense}>RM 0.00</p>
                             </div>
                         </div>
 
@@ -300,7 +413,7 @@ export default function AnalyticsPage() {
                                         <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-bold text-[#00001c] mb-1 font-mono">${expense.amount}</p>
+                                        <p className="text-2xl font-bold text-[#00001c] mb-1 font-mono">RM {expense.amount}</p>
                                         <p className="text-sm font-medium text-muted-foreground">{expense.category}</p>
                                     </div>
                                     <div className="mt-3 w-full bg-black/5 h-1.5 rounded-full overflow-hidden">
@@ -314,7 +427,7 @@ export default function AnalyticsPage() {
                         <div className="expense-item mt-6 p-6 bg-gradient-to-r from-[#00001c] to-[#1a1a4a] rounded-2xl text-white flex items-center justify-between shadow-xl cursor-pointer hover:scale-[1.02] transition-transform">
                             <div>
                                 <p className="text-sm text-white/60 mb-1">Net Monthly Profit</p>
-                                <p className="text-3xl font-bold font-mono text-[#00ff7f] scramble-val" data-value={currentData.netProfit}>$0.00</p>
+                                <p className="text-3xl font-bold font-mono text-[#00ff7f] scramble-val" data-value={currentData.netProfit}>RM 0.00</p>
                             </div>
                             <div className="w-12 h-12 rounded-full bg-[#00ff7f]/20 flex items-center justify-center text-[#00ff7f]">
                                 <DollarSign className="w-6 h-6" />
@@ -324,6 +437,6 @@ export default function AnalyticsPage() {
 
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

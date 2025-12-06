@@ -58,7 +58,7 @@ export default function InvestPage() {
             ease: "circ.out",
             onUpdate: () => {
                 const el = document.querySelector(totalValue);
-                if (el) el.innerHTML = '$' + obj.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                if (el) el.innerHTML = 'RM ' + obj.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
         });
 
@@ -93,7 +93,7 @@ export default function InvestPage() {
                         </div>
                         <div>
                             <p className="text-xs text-white/60 uppercase tracking-wider font-semibold">Total Balance</p>
-                            <p className="text-2xl font-bold total-value font-mono">$0.00</p>
+                            <p className="text-2xl font-bold total-value font-mono">RM 0.00</p>
                         </div>
                     </div>
                 </div>
@@ -140,7 +140,7 @@ export default function InvestPage() {
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="font-bold text-[#00001c]">${asset.value.toLocaleString()}</p>
+                                    <p className="font-bold text-[#00001c]">RM {asset.value.toLocaleString()}</p>
                                     <p className={cn("text-xs font-medium flex items-center justify-end gap-1", asset.change > 0 ? "text-green-600" : "text-red-500")}>
                                         {asset.change > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                                         {Math.abs(asset.change)}%
