@@ -36,10 +36,7 @@ export function Navbar() {
             {/* Desktop Top Navigation */}
             <nav className="hidden md:flex fixed top-0 w-full bg-[#00001c] border-b border-white/10 z-50 px-6 py-3 items-center justify-between text-white">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-[#00ff7f] flex items-center justify-center text-[#00001c] font-bold">
-                        S
-                    </div>
-                    <span className="font-bold text-lg">SideDuit</span>
+                    <img src="/logo.jpg" alt="SideDuit Logo" className="h-8 w-auto object-contain" />
                 </div>
                 <div className="flex gap-6">
                     {navItems.map((item) => (
