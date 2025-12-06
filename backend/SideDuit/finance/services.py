@@ -153,3 +153,46 @@ def save_transactions_to_supabase(transactions, user_id=None):
             release_db_connection(conn)
             
     return count
+
+def log_upload(file_obj, filename, user_id=None):
+    """
+    Log the upload event and save the file blob to update_logs table.
+    """
+    conn = None
+    try:
+        # Reset file pointer to beginning to read content
+        file_obj.seek(0)
+        content = file_obj.read()
+        # Reset again for subsequent processing
+        file_obj.seek(0)
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        insert_query = """
+        INSERT INTO public.update_logs 
+        (upload_user, upload_document_name, uploaded_document)
+        VALUES (%s, %s, %s)
+        """
+        
+        # Default user_id to '0' if not provided
+        final_user_id = str(user_id) if user_id is not None else '0'
+        
+        cur.execute(insert_query, (
+            final_user_id,
+            filename,
+            psycopg2.Binary(content)
+        ))
+        
+        conn.commit()
+        cur.close()
+        print(f"Logged upload for {filename}")
+        
+    except Exception as e:
+        print(f"Error logging upload for {filename}: {e}")
+        if conn:
+            conn.rollback()
+        # We don't raise here to avoid blocking the main processing if logging fails
+    finally:
+        if conn:
+            release_db_connection(conn)

@@ -1,7 +1,4 @@
-from django.shortcuts import render
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from .services import process_document, save_transactions_to_supabase
+from .services import process_document, save_transactions_to_supabase, log_upload
 
 def upload_view(request):
     """
@@ -24,6 +21,9 @@ def upload_view(request):
         
         for f in files:
             try:
+                # Log the upload first
+                log_upload(f, f.name, user_id)
+                
                 # Process with LLM
                 transactions = process_document(f, f.name)
                 
