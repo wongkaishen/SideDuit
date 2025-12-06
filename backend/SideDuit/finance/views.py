@@ -21,15 +21,15 @@ def upload_view(request):
         
         for f in files:
             try:
-                # Log the upload first
-                log_upload(f, f.name, user_id)
+                # Log the upload first and get the ID
+                upload_id = log_upload(f, f.name, user_id)
                 
                 # Process with LLM
                 transactions = process_document(f, f.name)
                 
-                # Save to DB with user_id for isolation
+                # Save to DB with user_id and upload_id
                 if transactions:
-                    count = save_transactions_to_supabase(transactions, user_id=user_id)
+                    count = save_transactions_to_supabase(transactions, user_id=user_id, upload_id=upload_id)
                     total_processed += count
                 else:
                     errors.append(f"{f.name}: No transactions found or parsing failed.")

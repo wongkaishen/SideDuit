@@ -98,13 +98,14 @@ def process_document(file_obj, filename):
         print(f"Error processing {filename}: {e}")
         return []
 
-def save_transactions_to_supabase(transactions, user_id=None):
+def save_transactions_to_supabase(transactions, user_id=None, upload_id=None):
     """
     Insert transactions into Supabase table with connection pooling.
     
     Args:
         transactions: List of transaction dictionaries
         user_id: Optional user ID for multi-tenant isolation
+        upload_id: ID from update_logs table
     
     Returns:
         Number of transactions inserted
@@ -121,7 +122,7 @@ def save_transactions_to_supabase(transactions, user_id=None):
         
         insert_query = """
         INSERT INTO public.transactions 
-        (date, time, transaction_type, transaction_amount, document_id, user_id)
+        (date, time, transaction_type, transaction_amount, upload_id, user_id)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
         
@@ -134,7 +135,7 @@ def save_transactions_to_supabase(transactions, user_id=None):
                 t.get('time'),
                 t.get('transaction_type'),
                 t.get('transaction_amount'),
-                t.get('document_id'),
+                upload_id,  # Link to update_logs
                 final_user_id
             ))
             count += 1
@@ -173,6 +174,7 @@ def log_upload(file_obj, filename, user_id=None):
         INSERT INTO public.update_logs 
         (upload_user, upload_document_name, uploaded_document)
         VALUES (%s, %s, %s)
+        RETURNING upload_id
         """
         
         # Default user_id to '0' if not provided
@@ -184,15 +186,18 @@ def log_upload(file_obj, filename, user_id=None):
             psycopg2.Binary(content)
         ))
         
+        upload_id = cur.fetchone()[0]
         conn.commit()
         cur.close()
-        print(f"Logged upload for {filename}")
+        print(f"Logged upload for {filename} with ID {upload_id}")
+        return upload_id
         
     except Exception as e:
         print(f"Error logging upload for {filename}: {e}")
         if conn:
             conn.rollback()
-        # We don't raise here to avoid blocking the main processing if logging fails
+        # We don't raise here to avoid blocking, but return None
+        return None
     finally:
         if conn:
             release_db_connection(conn)
