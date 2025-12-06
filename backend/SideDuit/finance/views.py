@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 from .services import process_document, save_transactions_to_supabase, log_upload
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -10,6 +11,7 @@ from .utils import FinancialCalculator
 
 
 
+@csrf_exempt
 def upload_view(request):
     """
     Handle file upload and processing.

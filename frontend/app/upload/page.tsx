@@ -46,16 +46,36 @@ export default function UploadPage() {
         setFiles((prev) => prev.filter((_, i) => i !== idx));
     };
 
-    const handleUpload = () => {
+    const handleUpload = async () => {
         if (files.length === 0) return;
         setIsUploading(true);
-        // Simulate upload delay
-        setTimeout(() => {
+        setUploadComplete(false);
+
+        const formData = new FormData();
+        files.forEach((file) => {
+            formData.append('documents', file);
+        });
+
+        try {
+            const response = await fetch('http://127.0.0.1:8000/finance/upload/', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (response.ok) {
+                setUploadComplete(true);
+                setFiles([]);
+                alert("Documents uploaded and processed successfully!");
+            } else {
+                console.error("Upload failed");
+                alert("Upload failed. Please try again.");
+            }
+        } catch (error) {
+            console.error("Error uploading files:", error);
+            alert("An error occurred during upload.");
+        } finally {
             setIsUploading(false);
-            setUploadComplete(true);
-            setFiles([]); // Clear files after "upload"
-            alert("Documents uploaded for OCR extraction! (Mock)");
-        }, 2000);
+        }
     };
 
     return (
