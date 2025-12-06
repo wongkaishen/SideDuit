@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/ui/navbar";
+import { AuroraBackground } from "@/components/ui/aurora-background";
+import { Particles } from "@/components/ui/particles";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -37,8 +39,17 @@ export default function RootLayout({
       <body
         className={`${inter.variable} antialiased min-h-screen pb-16 md:pb-0 md:pt-16`}
       >
-        <Navbar />
-        {children}
+        <AuroraBackground>
+          <Particles
+            className="absolute inset-0 z-0 pointer-events-none"
+            quantity={100}
+            ease={80}
+            color="#000000"
+            refresh
+          />
+          <Navbar />
+          {children}
+        </AuroraBackground>
       </body>
     </html>
   );
