@@ -8,12 +8,11 @@ import {
     Library,
     Search,
     Sparkles,
-    MessageCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { openChatbot } from '@/lib/chatbot-utils';
 import { GaugeChart } from './gauge-chart';
 import { Typewriter } from './typewriter';
-import { ChatModal } from './chat-modal';
 
 // --- TYPE DEFINITIONS ---
 type QuickAction = {
@@ -80,7 +79,6 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [inputValue, setInputValue] = useState("");
-    const [isChatOpen, setIsChatOpen] = useState(false);
 
     // Gig Health Score Logic - Use real value from summary prop
     const healthScore = summary.gigHealthScore || 0;
@@ -88,9 +86,10 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
     if (healthScore < 50) gaugeColor = "#ef4444"; // Red
     else if (healthScore < 80) gaugeColor = "#f97316"; // Orange
     
-    // Handle chat open
+    // Handle chat open - use global chatbot
     const handleOpenChat = () => {
-        setIsChatOpen(true);
+        openChatbot(inputValue);
+        setInputValue(''); // Clear input after opening chat
     };
     
     // Handle Enter key press in input
@@ -153,9 +152,11 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                     }
                 },
                 onComplete: () => {
-                    // Ensure final formatted value with decimals if needed
+                    // Ensure final formatted value
                     if (isCurrency) {
                         el.innerText = 'RM ' + finalValue.toLocaleString();
+                    } else {
+                        el.innerText = Math.floor(finalValue).toString();
                     }
                 }
             });
@@ -221,9 +222,19 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                     <div className="relative w-full max-w-2xl group">
                         <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-full opacity-25 blur-lg"></div>
                         <div className="relative flex items-center bg-white backdrop-blur-xl border border-white/20 rounded-full shadow-[0_0_50px_rgba(255,255,255,0.2)] transition-all duration-500 h-16 px-6">
-                            <div className="mr-4 p-2 bg-gradient-to-br from-yellow-400 to-purple-600 rounded-full animate-pulse shadow-lg">
-                                <Sparkles className="w-6 h-6 text-white" />
-                            </div>
+                            <button 
+                                onClick={handleOpenChat}
+                                className="mr-4 p-2 bg-gradient-to-br from-yellow-400 to-purple-600 rounded-full shadow-lg hover:scale-110 transition-all duration-300 cursor-pointer relative group"
+                                title="Open AI Chat"
+                            >
+                                <Sparkles className="w-6 h-6 text-white animate-pulse" />
+                                {/* Glow effect on hover */}
+                                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-400 to-purple-600 opacity-0 group-hover:opacity-50 blur-md transition-opacity duration-300 -z-10"></div>
+                                {/* Tooltip */}
+                                <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-[#00001c] text-white text-xs px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap pointer-events-none">
+                                    Click to chat with AI
+                                </span>
+                            </button>
                             <input
                                 type="text"
                                 className="w-full bg-transparent border-none outline-none text-lg text-[#00001c] placeholder-transparent focus:ring-0 px-0 h-full font-medium tracking-wide"
@@ -290,8 +301,22 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                             className="absolute top-0 right-0 w-32 h-32 opacity-10 rounded-full blur-3xl -mr-10 -mt-10"
                             style={{ backgroundColor: gaugeColor }}
                         ></div>
-                        <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest mb-4">Gig Health Score</h3>
-                        <GaugeChart value={healthScore} color={gaugeColor} size={160} label="Profitability" />
+                        <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest mb-2">Gig Health Score</h3>
+                        
+                        {/* Score Number */}
+                        <div className="relative mb-3 flex items-baseline justify-center">
+                            <span 
+                                className="text-5xl md:text-6xl font-bold tracking-tight scramble-num" 
+                                data-value={healthScore}
+                                data-currency="false"
+                                style={{ color: gaugeColor }}
+                            >
+                                0
+                            </span>
+                            <span className="text-3xl font-bold text-white/50 ml-1">/100</span>
+                        </div>
+                        
+                        <GaugeChart value={healthScore} color={gaugeColor} size={140} label="Profitability" />
                     </div>
                 </div>
 
@@ -403,32 +428,6 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                     </div>
                 </div>
             </div>
-            
-            {/* Floating Chat Button - Always visible */}
-            <button
-                onClick={() => {
-                    setIsChatOpen(true);
-                    setInputValue(''); // Clear input when opening from button
-                }}
-                className="fixed bottom-8 right-8 z-50 p-4 bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-full shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 hover:scale-110 group animate-in zoom-in-0 slide-in-from-bottom-4"
-                title="Open AI Chat"
-            >
-                <MessageCircle className="w-6 h-6" />
-                {/* Notification badge if there's chat history */}
-                {typeof window !== 'undefined' && localStorage.getItem('sideduit_chat_history') && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></span>
-                )}
-            </button>
-            
-            {/* Chat Modal */}
-            <ChatModal 
-                isOpen={isChatOpen} 
-                onClose={() => {
-                    setIsChatOpen(false);
-                    setInputValue(''); // Clear input when closing
-                }}
-                initialQuery={inputValue}
-            />
         </div>
     );
 };

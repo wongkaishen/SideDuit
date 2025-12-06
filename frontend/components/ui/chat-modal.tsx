@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Sparkles, Loader2, FileText, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -51,6 +53,9 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const initialQuerySentRef = useRef(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Load chat history from localStorage on mount
   useEffect(() => {
@@ -79,6 +84,27 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
 
   useEffect(() => {
     scrollToBottom();
+    
+    // Animate new messages
+    if (messages.length > 0 && messagesContainerRef.current) {
+      const lastMessage = messagesContainerRef.current.querySelector('.chat-message:last-of-type');
+      if (lastMessage) {
+        gsap.fromTo(lastMessage,
+          {
+            opacity: 0,
+            y: 20,
+            scale: 0.95,
+          },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.4,
+            ease: "back.out(1.5)"
+          }
+        );
+      }
+    }
   }, [messages]);
 
   // Focus input when modal opens and handle initial query
@@ -173,18 +199,94 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
     }
   };
 
+  // GSAP animations for modal open/close
+  useGSAP(() => {
+    if (isOpen && modalRef.current && backdropRef.current) {
+      // Reset initial state
+      gsap.set(modalRef.current, {
+        scale: 0.7,
+        opacity: 0,
+        rotationX: 15,
+        y: 100,
+        transformPerspective: 1000,
+      });
+      
+      gsap.set(backdropRef.current, {
+        opacity: 0,
+      });
+
+      // Create timeline for entrance animation
+      const tl = gsap.timeline();
+      
+      tl.to(backdropRef.current, {
+        opacity: 1,
+        duration: 0.3,
+        ease: "power2.out"
+      })
+      .to(modalRef.current, {
+        scale: 1,
+        opacity: 1,
+        rotationX: 0,
+        y: 0,
+        duration: 0.6,
+        ease: "expo.out"
+      }, "-=0.1")
+      .from('.modal-header', {
+        opacity: 0,
+        y: -20,
+        duration: 0.4,
+        ease: "back.out(1.5)"
+      }, "-=0.3")
+      .from('.modal-content-area', {
+        opacity: 0,
+        duration: 0.4,
+      }, "-=0.2")
+      .from('.modal-input-area', {
+        opacity: 0,
+        y: 20,
+        duration: 0.4,
+        ease: "back.out(1.5)"
+      }, "-=0.2");
+    }
+  }, { dependencies: [isOpen], scope: modalRef });
+
+  // Handle close with animation
+  const handleClose = () => {
+    if (modalRef.current && backdropRef.current) {
+      const tl = gsap.timeline({
+        onComplete: onClose
+      });
+      
+      tl.to(modalRef.current, {
+        scale: 0.7,
+        opacity: 0,
+        rotationX: -15,
+        y: 100,
+        duration: 0.4,
+        ease: "expo.in"
+      })
+      .to(backdropRef.current, {
+        opacity: 0,
+        duration: 0.3,
+      }, "-=0.2");
+    } else {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop with blur */}
       <div 
+        ref={backdropRef}
         className="absolute inset-0 bg-black/30 backdrop-blur-md"
-        onClick={onClose}
+        onClick={handleClose}
       />
 
       {/* Modal Container - Glassmorphism */}
-      <div className="relative w-full max-w-4xl h-[600px] flex flex-col rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+      <div ref={modalRef} className="relative w-full max-w-4xl h-[600px] flex flex-col rounded-3xl overflow-hidden shadow-2xl">
         {/* Glassmorphism background */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/90 via-white/80 to-white/70 backdrop-blur-xl" />
         
@@ -194,7 +296,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
         {/* Content */}
         <div className="relative z-10 flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-white/20 bg-white/40">
+          <div className="modal-header flex items-center justify-between p-6 border-b border-white/20 bg-white/40">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl shadow-lg">
                 <Sparkles className="w-5 h-5 text-white" />
@@ -217,7 +319,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
                 </button>
               )}
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="p-2 hover:bg-black/5 rounded-full transition-colors"
               >
                 <X className="w-5 h-5 text-[#00001c]" />
@@ -226,7 +328,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div ref={messagesContainerRef} className="modal-content-area flex-1 overflow-y-auto p-6 space-y-4">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <div className="p-4 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl mb-4">
@@ -267,7 +369,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
                   <div
                     key={idx}
                     className={cn(
-                      "flex gap-3 animate-in slide-in-from-bottom-2 duration-300",
+                      "chat-message flex gap-3",
                       message.role === 'user' ? 'justify-end' : 'justify-start'
                     )}
                   >
@@ -362,7 +464,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, initialQu
           </div>
 
           {/* Input Area */}
-          <div className="p-6 border-t border-white/20 bg-white/40">
+          <div className="modal-input-area p-6 border-t border-white/20 bg-white/40">
             <div className="relative flex items-center gap-3">
               <input
                 ref={inputRef}

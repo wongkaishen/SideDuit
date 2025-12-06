@@ -4,6 +4,7 @@ import "./globals.css";
 import { Navbar } from "@/components/ui/navbar";
 import { AuroraBackground } from "@/components/ui/aurora-background";
 import { Particles } from "@/components/ui/particles";
+import { GlobalChatbot } from "@/components/ui/global-chatbot";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -49,6 +50,7 @@ export default function RootLayout({
           />
           <Navbar />
           {children}
+          <GlobalChatbot />
         </AuroraBackground>
       </body>
     </html>
