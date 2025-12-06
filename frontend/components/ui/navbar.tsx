@@ -57,6 +57,15 @@ export function Navbar() {
       )}
     >
       <div className="flex items-center gap-3 bg-background/5 border border-border backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
+        {/* Logo */}
+        <Link href="/" className="flex items-center pl-4 pr-2">
+          <img
+            src="/logo.jpg"
+            alt="SideDuit"
+            className="h-8 w-auto"
+            style={{ maxWidth: '110px' }}
+          />
+        </Link>
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.url

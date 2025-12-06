@@ -15,6 +15,15 @@ export const metadata: Metadata = {
   title: "SideDuit",
   description: "Financial Dashboard & OCR Expense Tracker",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/logo.jpg",
+  },
+  openGraph: {
+    title: "SideDuit",
+    description: "Financial Dashboard & OCR Expense Tracker",
+    images: ["/logo.jpg"],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

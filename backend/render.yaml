@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: sideduit-backend
+    env: python
+    region: singapore
+    buildCommand: "./build.sh"
+    startCommand: "cd SideDuit && gunicorn SideDuit.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: false
+      - key: ALLOWED_HOSTS
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_DB_HOST
+        sync: false
+      - key: SUPABASE_DB_PASSWORD
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
