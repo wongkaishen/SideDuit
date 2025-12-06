@@ -43,7 +43,8 @@ def process_document(file_obj, filename):
     - year (integer, e.g. 2023)
     - date (string, YYYY-MM-DD)
     - time (string, HH:MM:SS, or null if not found)
-    - transaction_type (string, e.g. "Food", "Transport", "Groceries", "Utilities", etc. Infer based on items)
+    - transaction_type (string, either "Income" or "Expense". Receipts/Bills are usually "Expense". Payslips/Invoices sent are "Income".)
+    - category (string, e.g. "Food", "Transport", "Groceries", "Utilities", etc. Infer based on items)
     - transaction_amount (number, decimal)
     
     If the year is missing, infer it from the date.
