@@ -32,9 +32,11 @@ export default function AnalyticsPage() {
                 const transactions = await fetchAllTransactions();
                 const grouped = groupTransactionsByMonth(transactions);
                 
-                // Get available months sorted by most recent
+                // Get available months sorted by most recent using sortKey
                 const months = Object.keys(grouped).sort((a, b) => {
-                    return new Date(b).getTime() - new Date(a).getTime();
+                    const sortKeyA = grouped[a].sortKey || '0000-00';
+                    const sortKeyB = grouped[b].sortKey || '0000-00';
+                    return sortKeyB.localeCompare(sortKeyA); // Descending order
                 });
 
                 setMonthlyData(grouped);

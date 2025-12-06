@@ -93,8 +93,9 @@ class SupabaseFinancialCalculator:
         _, num_days = calendar.monthrange(today.year, today.month)
         days_passed = today.day
 
-        if days_passed == 0:
-            return Decimal('0.00')
+        # Guard against edge cases (shouldn't happen, but be safe)
+        if days_passed < 1:
+            days_passed = 1
 
         # Get income for current month only
         query = """
@@ -114,6 +115,10 @@ class SupabaseFinancialCalculator:
         result = cur.fetchone()
 
         current_income = Decimal(str(result[0])) if result[0] else Decimal('0.00')
+
+        # If no income yet this month, return 0
+        if current_income == 0:
+            return Decimal('0.00')
 
         # Calculate projection
         daily_average = current_income / Decimal(days_passed)
@@ -157,57 +162,140 @@ class SupabaseFinancialCalculator:
 
     def get_recent_activities(self, limit=5):
         """
-        Get recent transactions with upload information.
-        Returns list of recent activities sorted by creation date.
+        Get recent transactions with enhanced information from embeddings.
+        Returns list of recent activities with rich descriptions.
+        Falls back to basic query if embeddings table doesn't exist.
         """
         conn = None
         try:
             conn = get_db_connection()
             cur = conn.cursor()
 
-            query = """
-            SELECT
-                t.id,
-                t.date,
-                t.time,
-                t.transaction_type,
-                t.transaction_amount,
-                t.created_at,
-                ul.upload_document_name,
-                ul.created_at as upload_date
-            FROM public.transactions t
-            LEFT JOIN public.update_logs ul ON t.upload_id = ul.upload_id
-            WHERE 1=1
-            """
-            params = []
+            # Try query with embeddings first
+            try:
+                query = """
+                SELECT
+                    t.id,
+                    t.date,
+                    t.time,
+                    t.transaction_type,
+                    t.transaction_amount,
+                    t.created_at,
+                    ul.upload_document_name,
+                    ul.created_at as upload_date,
+                    te.transaction_category,
+                    te.merchant_name,
+                    te.original_text,
+                    te.document_type
+                FROM public.transactions t
+                LEFT JOIN public.update_logs ul ON t.upload_id = ul.upload_id
+                LEFT JOIN public.transaction_embeddings te ON t.id = te.transaction_id
+                WHERE 1=1
+                """
+                params = []
 
-            # Filter by user if specified
-            if self.user_id:
-                query += " AND t.user_id = %s"
-                params.append(self.user_id)
+                # Filter by user if specified
+                if self.user_id:
+                    query += " AND t.user_id = %s"
+                    params.append(self.user_id)
 
-            query += """
-            ORDER BY t.created_at DESC
-            LIMIT %s
-            """
-            params.append(limit)
+                query += """
+                ORDER BY t.created_at DESC
+                LIMIT %s
+                """
+                params.append(limit)
 
-            cur.execute(query, params)
-            results = cur.fetchall()
+                cur.execute(query, params)
+                results = cur.fetchall()
 
-            activities = []
-            for row in results:
-                activity = {
-                    "id": row[0],
-                    "date": row[1].strftime("%Y-%m-%d") if row[1] else None,
-                    "time": str(row[2]) if row[2] else None,
-                    "transaction_type": row[3],
-                    "amount": float(row[4]) if row[3].lower() == 'income' else -float(row[4]),
-                    "created_at": row[5].isoformat() if row[5] else None,
-                    "document_name": row[6],
-                    "upload_date": row[7].isoformat() if row[7] else None,
-                }
-                activities.append(activity)
+                activities = []
+                for row in results:
+                    # Generate rich description
+                    description = self._generate_activity_description(
+                        transaction_type=row[3],
+                        amount=float(row[4]),
+                        category=row[8],
+                        merchant=row[9],
+                        doc_name=row[6]
+                    )
+                    
+                    activity = {
+                        "id": row[0],
+                        "date": row[1].strftime("%Y-%m-%d") if row[1] else None,
+                        "time": str(row[2]) if row[2] else None,
+                        "transaction_type": row[3],
+                        "amount": float(row[4]) if row[3].lower() == 'income' else -float(row[4]),
+                        "created_at": row[5].isoformat() if row[5] else None,
+                        "document_name": description,  # Use rich description
+                        "upload_date": row[7].isoformat() if row[7] else None,
+                        "category": row[8],
+                        "merchant": row[9],
+                        "document_type": row[11],
+                    }
+                    activities.append(activity)
+
+            except Exception as embeddings_error:
+                # Embeddings table doesn't exist - fall back to basic query
+                if "does not exist" in str(embeddings_error):
+                    print("⚠️  transaction_embeddings table not found - using basic query")
+                    print("   Run COMPLETE_SETUP.sql to enable rich descriptions")
+                    
+                    # Basic query without embeddings
+                    query = """
+                    SELECT
+                        t.id,
+                        t.date,
+                        t.time,
+                        t.transaction_type,
+                        t.transaction_amount,
+                        t.created_at,
+                        ul.upload_document_name,
+                        ul.created_at as upload_date
+                    FROM public.transactions t
+                    LEFT JOIN public.update_logs ul ON t.upload_id = ul.upload_id
+                    WHERE 1=1
+                    """
+                    params = []
+
+                    if self.user_id:
+                        query += " AND t.user_id = %s"
+                        params.append(self.user_id)
+
+                    query += """
+                    ORDER BY t.created_at DESC
+                    LIMIT %s
+                    """
+                    params.append(limit)
+
+                    cur.execute(query, params)
+                    results = cur.fetchall()
+
+                    activities = []
+                    for row in results:
+                        # Use basic description (document name or transaction type)
+                        description = self._generate_basic_description(
+                            transaction_type=row[3],
+                            amount=float(row[4]),
+                            doc_name=row[6]
+                        )
+                        
+                        activity = {
+                            "id": row[0],
+                            "date": row[1].strftime("%Y-%m-%d") if row[1] else None,
+                            "time": str(row[2]) if row[2] else None,
+                            "transaction_type": row[3],
+                            "amount": float(row[4]) if row[3].lower() == 'income' else -float(row[4]),
+                            "created_at": row[5].isoformat() if row[5] else None,
+                            "document_name": description,
+                            "upload_date": row[7].isoformat() if row[7] else None,
+                            "category": None,
+                            "merchant": None,
+                            "document_type": None,
+                        }
+                        activities.append(activity)
+                else:
+                    # Some other error - re-raise
+                    raise embeddings_error
 
             cur.close()
             return activities
@@ -218,4 +306,45 @@ class SupabaseFinancialCalculator:
         finally:
             if conn:
                 release_db_connection(conn)
+    
+    def _generate_activity_description(self, transaction_type, amount, category, merchant, doc_name):
+        """
+        Generate a human-readable description for the activity.
+        Examples:
+        - "Grab Ride - Transport"
+        - "McDonald's - Food"
+        - "Freelance Income - Design Project"
+        """
+        # Clean up category for display
+        category_display = category if category else "Transaction"
+        if category_display and '-' in category_display:
+            category_display = category_display.split('-')[1]  # Take second part
+        
+        # Build description
+        if merchant:
+            return f"{merchant} - {category_display}"
+        elif category:
+            if transaction_type.lower() == 'income':
+                return f"{category} Income"
+            else:
+                return f"{category} Expense"
+        elif doc_name:
+            # Fallback to cleaned document name
+            name = doc_name.replace('_', ' ').replace('-', ' ')
+            name = name.rsplit('.', 1)[0] if '.' in name else name
+            return name.title()
+        else:
+            return f"{transaction_type} RM {amount:.2f}"
+    
+    def _generate_basic_description(self, transaction_type, amount, doc_name):
+        """
+        Generate a basic description when embeddings table doesn't exist.
+        """
+        if doc_name:
+            # Clean up document name
+            name = doc_name.replace('_', ' ').replace('-', ' ')
+            name = name.rsplit('.', 1)[0] if '.' in name else name
+            return name.title()
+        else:
+            return f"{transaction_type} - RM {amount:.2f}"
 

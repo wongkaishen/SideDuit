@@ -32,6 +32,11 @@ def upload_view(request):
                 # Log the upload first and get the ID
                 upload_id = log_upload(f, f.name, user_id)
                 
+                # Check if logging succeeded
+                if upload_id is None:
+                    errors.append(f"{f.name}: Failed to log upload to database.")
+                    continue
+                
                 # Process with LLM
                 transactions = process_document(f, f.name)
                 

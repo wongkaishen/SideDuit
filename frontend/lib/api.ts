@@ -108,8 +108,17 @@ export function calculateGigHealthScore(summary: DashboardSummary): number {
   // 3. Tax Readiness Score (0-30 points)
   // Having money set aside for tax is good
   const monthlyTaxObligation = estimated_annual_tax / 12;
-  const taxReadiness = Math.min((total_income - total_expenses) / monthlyTaxObligation, 1);
-  const taxScore = taxReadiness * 30;
+  let taxScore = 0;
+  
+  if (monthlyTaxObligation > 0) {
+    // Only calculate if there's a tax obligation
+    const netIncome = total_income - total_expenses;
+    const taxReadiness = Math.min(netIncome / monthlyTaxObligation, 1);
+    taxScore = Math.max(taxReadiness * 30, 0);
+  } else {
+    // No tax obligation means full score (income is below tax threshold)
+    taxScore = 30;
+  }
 
   // Total score (0-100)
   const totalScore = Math.round(incomeScore + expenseScore + taxScore);
@@ -190,6 +199,7 @@ export interface MonthlyData {
   incomeCount: number;
   expenseCount: number;
   transactions: Activity[];
+  sortKey?: string; // ISO format YYYY-MM for sorting
 }
 
 export function groupTransactionsByMonth(transactions: Activity[]): Record<string, MonthlyData> {
@@ -197,30 +207,37 @@ export function groupTransactionsByMonth(transactions: Activity[]): Record<strin
 
   transactions.forEach((transaction) => {
     const date = new Date(transaction.date);
-    const monthKey = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    // Use sortable ISO format (YYYY-MM) as internal key
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const sortKey = `${year}-${month}`;
+    
+    // Create display-friendly key
+    const displayKey = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-    if (!grouped[monthKey]) {
-      grouped[monthKey] = {
+    if (!grouped[displayKey]) {
+      grouped[displayKey] = {
         totalIncome: 0,
         totalExpense: 0,
         netProfit: 0,
         incomeCount: 0,
         expenseCount: 0,
         transactions: [],
+        sortKey, // Add sortKey for proper sorting
       };
     }
 
-    grouped[monthKey].transactions.push(transaction);
+    grouped[displayKey].transactions.push(transaction);
 
     if (transaction.transaction_type.toLowerCase() === 'income') {
-      grouped[monthKey].totalIncome += Math.abs(transaction.amount);
-      grouped[monthKey].incomeCount++;
+      grouped[displayKey].totalIncome += Math.abs(transaction.amount);
+      grouped[displayKey].incomeCount++;
     } else {
-      grouped[monthKey].totalExpense += Math.abs(transaction.amount);
-      grouped[monthKey].expenseCount++;
+      grouped[displayKey].totalExpense += Math.abs(transaction.amount);
+      grouped[displayKey].expenseCount++;
     }
 
-    grouped[monthKey].netProfit = grouped[monthKey].totalIncome - grouped[monthKey].totalExpense;
+    grouped[displayKey].netProfit = grouped[displayKey].totalIncome - grouped[displayKey].totalExpense;
   });
 
   return grouped;
