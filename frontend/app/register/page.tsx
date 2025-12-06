@@ -2,42 +2,47 @@
 
 import Head from 'next/head';
 import React, { FormEvent, useState } from 'react';
+import supabase from '../createClient';
+import { redirect } from 'next/dist/server/api-utils';
+import { useRouter} from 'next/router';
+import Router from 'next/router';
 
-// Define the component's props interface (currently empty)
 interface RegisterFormProps {}
 
 const RegisterForm: React.FC<RegisterFormProps> = () => {
-  // Simple state management for demonstration. In a real app, you'd use a more robust solution.
+
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: FormEvent) => {
+
+  const handleSubmit = async ( e: FormEvent)=>{
     e.preventDefault();
     setError('');
+    if(password !== confirmPassword){
+        setError("Passwords do not match!");
+        return ;
+    } else {
+        const {data , error} = await supabase.auth.signUp({
+            email,
+            password,
 
-    // --- Validation Logic ---
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
+        })
+
+        if(error){
+            setError(error.message);
+        } else {
+            alert("Registration successful!");
+            Router.push('/login');
+        }
     }
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long.");
-      return;
-    }
-    // --- End Validation Logic ---
-
-    // TODO: Implement actual registration/API call logic here
-    console.log('Registration attempt:', { email, password });
-    alert(`Registration initiated for ${email}!`); 
-  };
+  }
 
   return (
     <>
       <Head>
-        {/* Link to Inter font from Google Fonts */}
         <link 
           href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" 
           rel="stylesheet"
@@ -58,7 +63,6 @@ const RegisterForm: React.FC<RegisterFormProps> = () => {
           <div className="bg-white py-8 px-4 shadow-xl sm:rounded-lg sm:px-10">
             <form className="space-y-6" onSubmit={handleSubmit}>
               
-              {/* Error Message Display */}
               {error && (
                 <div className="rounded-md bg-red-50 p-4">
                   <div className="flex">
@@ -69,7 +73,6 @@ const RegisterForm: React.FC<RegisterFormProps> = () => {
                 </div>
               )}
 
-              {/* Email Input */}
               <div>
                 <label 
                   htmlFor="email" 
@@ -91,7 +94,6 @@ const RegisterForm: React.FC<RegisterFormProps> = () => {
                 </div>
               </div>
 
-              {/* New Password Input */}
               <div>
                 <label 
                   htmlFor="password" 
@@ -113,7 +115,6 @@ const RegisterForm: React.FC<RegisterFormProps> = () => {
                 </div>
               </div>
 
-              {/* Confirm Password Input */}
               <div>
                 <label 
                   htmlFor="confirm-password" 
@@ -140,7 +141,6 @@ const RegisterForm: React.FC<RegisterFormProps> = () => {
                 </div>
               </div>
               
-              {/* Submit Button */}
               <div>
                 <button
                   type="submit"
