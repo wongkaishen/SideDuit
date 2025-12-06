@@ -201,3 +201,33 @@ def log_upload(file_obj, filename, user_id=None):
     finally:
         if conn:
             release_db_connection(conn)
+
+def generate_retirement_plan(age, current_savings, monthly_contribution, retirement_age):
+    """
+    Generate retirement advice using Gemini.
+    """
+    model = get_gemini_model()
+    
+    prompt = f"""
+    You are a financial advisor for a gig worker in Malaysia.
+    
+    User Profile:
+    - Current Age: {age}
+    - Retirement Age: {retirement_age}
+    - Current EPF Savings: RM {current_savings}
+    - Monthly Contribution: RM {monthly_contribution}
+    
+    Task:
+    1. Calculate if they are on track for a comfortable retirement (assuming ~5.5% annual return).
+    2. Provide specific advice on whether they should increase contributions.
+    3. Suggest 2-3 actionable tips for gig workers to save more (e.g., i-Saraan).
+    
+    Keep the response concise (under 150 words), encouraging, and formatted as a single paragraph or short bullet points.
+    """
+    
+    try:
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print(f"Error generating advice: {e}")
+        return "Unable to generate advice at this time. Please try again later."

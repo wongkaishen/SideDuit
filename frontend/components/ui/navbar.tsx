@@ -22,6 +22,11 @@ const navItems = [
         icon: PieChart,
     },
     {
+        name: "Retirement",
+        href: "/retirement",
+        icon: PieChart, // Reusing PieChart for now, or could use another icon if available
+    },
+    {
         name: "Settings",
         href: "/settings", // Placeholder
         icon: Settings,

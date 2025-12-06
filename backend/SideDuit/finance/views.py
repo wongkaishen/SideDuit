@@ -2,10 +2,12 @@ from django.shortcuts import render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
-from .services import process_document, save_transactions_to_supabase, log_upload
+from .services import process_document, save_transactions_to_supabase, log_upload, generate_retirement_plan
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+import json
+from django.http import JsonResponse
 from django.contrib.auth.models import User
 from .utils import FinancialCalculator
 
@@ -77,3 +79,23 @@ def dashboard_summary(request):
 @api_view(['GET'])
 def hello_world(request):
     return Response({"message": "Hello from Django SideDuit Backend!"})
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def retirement_advisor_view(request):
+    """
+    Generate AI retirement advice based on user input.
+    """
+    try:
+        data = json.loads(request.body)
+        age = data.get('age')
+        current_savings = data.get('current_savings')
+        monthly_contribution = data.get('monthly_contribution')
+        retirement_age = data.get('retirement_age')
+        
+        advice = generate_retirement_plan(age, current_savings, monthly_contribution, retirement_age)
+        
+        return Response({"advice": advice})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
