@@ -282,11 +282,11 @@ export default function CashFlowPage() {
                         {Object.entries(groupedByDate).length === 0 ? (
                             <p className="text-center text-muted-foreground py-8">No transactions for this period</p>
                         ) : (
-                            Object.entries(groupedByDate).map(([date, txs]) => (
+                            (Object.entries(groupedByDate) as [string, any[]][]).map(([date, txs]) => (
                                 <div key={date} className="tx-group">
                                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">{date}</p>
                                     <div className="space-y-2">
-                                        {txs.map((tx, idx) => (
+                                        {txs.map((tx: any, idx: number) => (
                                             <div 
                                                 key={idx} 
                                                 className="flex items-center justify-between p-3 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors"
