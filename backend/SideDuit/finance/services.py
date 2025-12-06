@@ -52,10 +52,17 @@ def process_document(file_obj, filename):
     
     Return ONLY a raw JSON array. Do not include markdown formatting like ```json ... ```.
     
+    IMPORTANT DATE FORMAT RULES:
+    - Input dates in the document use BRITISH/UK format: DD/MM/YYYY
+    - Example: "5/12/2025" means 5th December 2025, NOT May 12th
+    - Example: "31/01/2024" means 31st January 2024, NOT invalid date
+    - Always convert to ISO format YYYY-MM-DD in your response
+    - If year is ambiguous, use current year (2024/2025)
+    
     Each transaction object should have:
     {
-      "year": 2024,  // integer, infer from date or current year
-      "date": "YYYY-MM-DD",  // required
+      "year": 2024,  // integer, extracted from date
+      "date": "YYYY-MM-DD",  // required, converted from DD/MM/YYYY format in document
       "time": "HH:MM:SS",  // or null if not found
       "transaction_type": "Income" or "Expense",  // Required
       "transaction_amount": 123.45,  // number with decimals
