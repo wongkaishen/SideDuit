@@ -54,24 +54,26 @@ const financialServicesData = [
     title: 'Wealth Management',
     description: 'Investment portfolios & advisory',
     isPremium: true,
-    href: '/invest',
+    href: '/wealth',
   },
   {
     icon: Target,
     title: 'Savings Goals',
     description: 'Set & track financial goals',
     hasAction: true,
+    href: '/savings',
   },
   {
     icon: SwitchCamera,
     title: 'Cash Flow',
     description: 'Income & expense analysis',
-    href: '/analytics',
+    href: '/cashflow',
   },
   {
     icon: Users,
     title: 'Joint Accounts',
     description: 'Family & business accounts',
+    href: '/joint',
   },
 ];
 
