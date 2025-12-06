@@ -11,6 +11,7 @@ export default function UploadPage() {
     const [files, setFiles] = useState<File[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadComplete, setUploadComplete] = useState(false);
+    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const filesRef = useRef<HTMLDivElement>(null);
@@ -123,7 +124,7 @@ export default function UploadPage() {
             if (response.ok) {
                 setUploadComplete(true);
                 setFiles([]);
-                alert("Documents uploaded and processed successfully!");
+                setShowSuccessPopup(true);
             } else {
                 console.error("Upload failed");
                 alert("Upload failed. Please try again.");
@@ -233,6 +234,29 @@ export default function UploadPage() {
                     </button>
                 </div>
             </div>
+
+            {/* Success Popup */}
+            {showSuccessPopup && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="bg-card border border-border p-6 rounded-xl shadow-2xl max-w-sm w-full mx-4 flex flex-col items-center text-center space-y-4 animate-in fade-in zoom-in duration-300">
+                        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-2">
+                            <CheckCircle className="w-8 h-8" />
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-xl font-bold text-foreground">Success!</h3>
+                            <p className="text-muted-foreground text-sm">
+                                Documents uploaded and processed successfully!
+                            </p>
+                        </div>
+                        <button 
+                            onClick={() => setShowSuccessPopup(false)}
+                            className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 transition-opacity mt-2"
+                        >
+                            Continue
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
