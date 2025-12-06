@@ -13,13 +13,14 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sparkline } from '@/components/ui/sparkline';
-import { fetchAllTransactions, groupTransactionsByMonth, type MonthlyData } from '@/lib/api';
+import { fetchAllTransactions, fetchDashboardSummary, groupTransactionsByMonth, type MonthlyData, type DashboardSummary } from '@/lib/api';
 
 export default function AnalyticsPage() {
     const containerRef = useRef<HTMLDivElement>(null);
     const [monthlyData, setMonthlyData] = useState<Record<string, MonthlyData>>({});
+    const [allTimeSummary, setAllTimeSummary] = useState<DashboardSummary | null>(null);
     const [availableMonths, setAvailableMonths] = useState<string[]>([]);
-    const [selectedMonth, setSelectedMonth] = useState<string>('');
+    const [selectedMonth, setSelectedMonth] = useState<string>('all'); // Default to 'all' for all-time view
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +30,13 @@ export default function AnalyticsPage() {
                 setLoading(true);
                 setError(null);
 
-                const transactions = await fetchAllTransactions();
+                // Fetch both all-time summary and transactions in parallel
+                const [summaryData, transactions] = await Promise.all([
+                    fetchDashboardSummary(),
+                    fetchAllTransactions()
+                ]);
+                
+                setAllTimeSummary(summaryData);
                 const grouped = groupTransactionsByMonth(transactions);
                 
                 // Get available months sorted by most recent using sortKey
@@ -42,10 +49,8 @@ export default function AnalyticsPage() {
                 setMonthlyData(grouped);
                 setAvailableMonths(months);
                 
-                // Select the most recent month by default
-                if (months.length > 0) {
-                    setSelectedMonth(months[0]);
-                }
+                // Default to "All Time" view to match dashboard
+                setSelectedMonth('all');
             } catch (err) {
                 console.error('Error loading analytics:', err);
                 setError('Failed to load analytics data');
@@ -57,7 +62,17 @@ export default function AnalyticsPage() {
         loadAnalytics();
     }, []);
 
-    const currentData = selectedMonth ? monthlyData[selectedMonth] : null;
+    // Get current data based on selection
+    const currentData = selectedMonth === 'all' 
+        ? (allTimeSummary ? {
+            totalIncome: allTimeSummary.total_income,
+            totalExpense: allTimeSummary.total_expenses,
+            netProfit: allTimeSummary.net_income,
+            incomeCount: 0,
+            expenseCount: 0,
+            transactions: Object.values(monthlyData).flatMap(m => m.transactions),
+          } : null)
+        : monthlyData[selectedMonth] || null;
 
     // Calculate simple trend data (last 7 days of transactions)
     const getTrendData = (transactions: any[], type: 'income' | 'expense') => {
@@ -209,25 +224,34 @@ export default function AnalyticsPage() {
                         </p>
                     </div>
 
-                    {/* Month Selector */}
-                    {availableMonths.length > 0 && (
-                        <div className="bg-white rounded-full p-1 shadow-md border flex items-center flex-wrap gap-1">
-                            {availableMonths.slice(0, 3).map((month) => (
-                                <button
-                                    key={month}
-                                    onClick={() => setSelectedMonth(month)}
-                                    className={cn(
-                                        "px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300",
-                                        selectedMonth === month
-                                            ? "bg-[#00001c] text-white shadow-lg scale-105"
-                                            : "text-muted-foreground hover:bg-muted"
-                                    )}
-                                >
-                                    {month.split(' ')[0]}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                    {/* Month Selector with All Time option */}
+                    <div className="bg-white rounded-full p-1 shadow-md border flex items-center flex-wrap gap-1">
+                        <button
+                            onClick={() => setSelectedMonth('all')}
+                            className={cn(
+                                "px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300",
+                                selectedMonth === 'all'
+                                    ? "bg-[#00001c] text-white shadow-lg scale-105"
+                                    : "text-muted-foreground hover:bg-muted"
+                            )}
+                        >
+                            All Time
+                        </button>
+                        {availableMonths.slice(0, 3).map((month) => (
+                            <button
+                                key={month}
+                                onClick={() => setSelectedMonth(month)}
+                                className={cn(
+                                    "px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300",
+                                    selectedMonth === month
+                                        ? "bg-[#00001c] text-white shadow-lg scale-105"
+                                        : "text-muted-foreground hover:bg-muted"
+                                )}
+                            >
+                                {month.split(' ')[0]}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* VISUAL METRICS SUMMARY */}
