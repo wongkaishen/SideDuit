@@ -6,6 +6,7 @@ from datetime import datetime
 from django.conf import settings
 from PIL import Image
 import io
+from .db_pool import get_db_connection, release_db_connection
 
 # Configure Gemini
 def get_gemini_model():
@@ -96,50 +97,44 @@ def process_document(file_obj, filename):
         print(f"Error processing {filename}: {e}")
         return []
 
-def save_transactions_to_supabase(transactions):
+def save_transactions_to_supabase(transactions, user_id=None):
     """
-    Insert transactions into Supabase table.
+    Insert transactions into Supabase table with connection pooling.
+    
+    Args:
+        transactions: List of transaction dictionaries
+        user_id: Optional user ID for multi-tenant isolation
+    
+    Returns:
+        Number of transactions inserted
     """
     if not transactions:
         return 0
-        
-    # Connection params
-    # postgres://postgres:[YOUR_PASSWORD]@db.owlqezrqhwnhviwirsvs.supabase.co:5432/postgres
-    db_password = os.getenv("SUPABASE_DB_PASSWORD")
-    if not db_password:
-        raise ValueError("SUPABASE_DB_PASSWORD environment variable not set")
-        
-    host = os.getenv("SUPABASE_DB_HOST", "aws-1-ap-northeast-2.pooler.supabase.com")
-    port = "5432"
-    dbname = "postgres"
-    user = os.getenv("SUPABASE_DB_USER", "postgres.owlqezrqhwnhviwirsvs")
     
     conn = None
     count = 0
     try:
-        conn = psycopg2.connect(
-            host=host,
-            database=dbname,
-            user=user,
-            password=db_password,
-            port=port
-        )
+        # Get connection from pool instead of creating new one
+        conn = get_db_connection()
         cur = conn.cursor()
         
         insert_query = """
         INSERT INTO public.transactions 
-        (year, date, time, transaction_type, transaction_amount, document_id)
+        (date, time, transaction_type, transaction_amount, document_id, user_id)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
         
+        # Default user_id to '0' if not provided, matching the schema default
+        final_user_id = str(user_id) if user_id is not None else '0'
+        
         for t in transactions:
             cur.execute(insert_query, (
-                t.get('year'),
                 t.get('date'),
                 t.get('time'),
                 t.get('transaction_type'),
                 t.get('transaction_amount'),
-                t.get('document_id')
+                t.get('document_id'),
+                final_user_id
             ))
             count += 1
             
@@ -153,6 +148,7 @@ def save_transactions_to_supabase(transactions):
         raise e
     finally:
         if conn:
-            conn.close()
+            # Return connection to pool instead of closing
+            release_db_connection(conn)
             
     return count
