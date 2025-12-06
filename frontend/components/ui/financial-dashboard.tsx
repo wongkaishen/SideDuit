@@ -1,10 +1,13 @@
 import * as React from 'react';
-import { motion } from 'framer-motion';
+import { useRef } from 'react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import {
     ChevronRight,
     History,
     Library,
     Search,
+    Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -13,10 +16,11 @@ type QuickAction = {
     icon: React.ElementType;
     title: string;
     description: string;
+    href?: string;
 };
 
 type Activity = {
-    icon: React.ReactNode | React.ElementType; // Allow both elements and components
+    icon: React.ReactNode | React.ElementType;
     title: string;
     time: string;
     amount: number;
@@ -28,6 +32,7 @@ type Service = {
     description: string;
     isPremium?: boolean;
     hasAction?: boolean;
+    href?: string;
 };
 
 type FinancialSummary = {
@@ -68,100 +73,182 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
     financialServices,
     summary,
 }) => {
-    // Animation variants for Framer Motion
-    const containerVariants = {
-        hidden: { opacity: 0, y: 20 },
-        visible: {
-            opacity: 1,
-            y: 0,
-            transition: {
-                staggerChildren: 0.1,
-            },
-        },
-    };
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [inputValue, setInputValue] = React.useState("");
 
-    const itemVariants = {
-        hidden: { opacity: 0, y: 15 },
-        visible: { opacity: 1, y: 0 },
-    };
+    useGSAP(() => {
+        const items = gsap.utils.toArray<HTMLElement>('.dashboard-item');
+        const numberElements = gsap.utils.toArray<HTMLElement>('.scramble-num');
+
+        // 1. Initial State (Hidden, Scaled Down, Tilted in 3D, Blurred)
+        gsap.set(items, {
+            autoAlpha: 0,
+            scale: 0.8,
+            rotationX: 45, // Tilted back
+            z: -100,      // Pushed back in 3D space
+            y: 50,
+            filter: 'blur(10px)',
+            transformPerspective: 1000,
+            transformOrigin: "center center"
+        });
+
+        // 2. The "Furious" Entry Animation
+        gsap.to(items, {
+            duration: 1.2,
+            autoAlpha: 1,
+            scale: 1,
+            rotationX: 0,
+            z: 0,
+            y: 0,
+            filter: 'blur(0px)',
+            ease: "expo.out", // High initial velocity, heavy friction
+            stagger: {
+                grid: 'auto', // Use grid detection
+                from: 'center', // Explode from center
+                amount: 0.6,    // Total stagger time
+            },
+            clearProps: "all" // Clean up for cleaner DOM after
+        });
+
+        // 3. Number Scramble Animation
+        numberElements.forEach((el) => {
+            const finalValue = parseFloat(el.dataset.value || "0");
+            const isCurrency = el.dataset.currency === "true";
+
+            const obj = { value: 0 };
+
+            gsap.to(obj, {
+                value: finalValue,
+                duration: 2,
+                ease: "power2.out",
+                onUpdate: () => {
+                    if (isCurrency) {
+                        el.innerText = '$' + obj.value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                    } else {
+                        el.innerText = Math.floor(obj.value).toString();
+                    }
+                },
+                onComplete: () => {
+                    // Ensure final formatted value with decimals if needed
+                    if (isCurrency) {
+                        el.innerText = '$' + finalValue.toLocaleString();
+                    }
+                }
+            });
+        });
+
+
+        // 4. Typewriter Placeholder Animation
+        const placeholder = document.getElementById('ai-placeholder');
+        if (placeholder) {
+            const prompts = [
+                "Ask SideDuit: 'How much can I spend this weekend?'",
+                "Ask SideDuit: 'Scan my Grab receipt'",
+                "Ask SideDuit: 'What is my net worth?'",
+                "Ask SideDuit: 'Show me my top expenses'"
+            ];
+
+            const masterTl = gsap.timeline({ repeat: -1 });
+
+            prompts.forEach(text => {
+                let typeTl = gsap.timeline({ repeat: 1, yoyo: true, repeatDelay: 1.5 });
+                typeTl.to(placeholder, {
+                    duration: text.length * 0.05,
+                    text: { value: text, delimiter: "" },
+                    ease: "none"
+                });
+                masterTl.add(typeTl);
+            });
+        }
+
+    }, { scope: containerRef });
 
     return (
-        <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={containerVariants}
-            className="w-full max-w-7xl mx-auto font-sans"
+        <div
+            ref={containerRef}
+            className="w-full max-w-7xl mx-auto font-sans perspective-1000" // Added perspective context
         >
             <div className="py-4 md:py-6">
                 {/* Summary Cards */}
-                <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="dashboard-item p-4 rounded-xl bg-green-500/10 border border-green-500/20">
                         <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Income</p>
-                        <p className="text-xl font-bold text-green-600 mt-1">${summary.totalIncome.toLocaleString()}</p>
+                        <p className="text-xl font-bold text-green-600 mt-1 scramble-num" data-value={summary.totalIncome} data-currency="true">$0</p>
                     </div>
-                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                    <div className="dashboard-item p-4 rounded-xl bg-red-500/10 border border-red-500/20">
                         <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Expenses</p>
-                        <p className="text-xl font-bold text-red-600 mt-1">${summary.totalExpenses.toLocaleString()}</p>
+                        <p className="text-xl font-bold text-red-600 mt-1 scramble-num" data-value={summary.totalExpenses} data-currency="true">$0</p>
                     </div>
-                    <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                    <div className="dashboard-item p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
                         <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Taxes (Est.)</p>
-                        <p className="text-xl font-bold text-blue-600 mt-1">${summary.estimatedTaxes.toLocaleString()}</p>
+                        <p className="text-xl font-bold text-blue-600 mt-1 scramble-num" data-value={summary.estimatedTaxes} data-currency="true">$0</p>
                     </div>
-                </motion.div>
+                </div>
 
-                {/* Search Bar */}
-                <motion.div variants={itemVariants} className="relative mb-6">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                        type="text"
-                        placeholder="Search transactions, payments, or type a command..."
-                        className="bg-background w-full border rounded-lg pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background outline-none"
-                    />
-                    <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center justify-center text-xs font-mono text-muted-foreground bg-muted p-1 rounded-md">
-                        ⌘K
-                    </kbd>
-                </motion.div>
+                {/* AI Hero Input */}
+                <div className="dashboard-item relative mb-8 flex justify-center z-20">
+                    <div className="relative w-full max-w-2xl group">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-full opacity-25 blur-lg"></div>
+                        <div className="relative flex items-center bg-white backdrop-blur-xl border border-white/20 rounded-full shadow-[0_0_50px_rgba(255,255,255,0.2)] transition-all duration-500 h-16 px-6">
+                            <div className="mr-4 p-2 bg-gradient-to-br from-yellow-400 to-purple-600 rounded-full animate-pulse shadow-lg">
+                                <Sparkles className="w-6 h-6 text-white" />
+                            </div>
+                            <input
+                                type="text"
+                                className="w-full bg-transparent border-none outline-none text-lg text-[#00001c] placeholder-transparent focus:ring-0 px-0 h-full font-medium tracking-wide"
+                                id="ai-input"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                            />
+                            {/* Typewriter Placeholder Overlay */}
+                            <div
+                                className={cn(
+                                    "absolute left-16 pl-4 pointer-events-none text-lg text-[#00001c]/50 font-light transition-opacity duration-200",
+                                    inputValue ? "opacity-0" : "opacity-100"
+                                )}
+                                id="ai-placeholder"
+                            >
+                                Ask SideDuit: 'How much can I spend?'
+                            </div>
+                            <kbd className="hidden sm:inline-flex items-center justify-center h-8 px-3 text-xs font-mono text-[#00001c]/40 bg-black/5 rounded-full border border-black/10 ml-4">
+                                ⌘ K
+                            </kbd>
+                        </div>
+                    </div>
+                </div>
 
                 {/* Quick Actions Grid */}
-                <motion.div
-                    variants={containerVariants}
-                    className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6"
-                >
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                     {quickActions.map((action, index) => (
-                        <motion.div
+                        <div
                             key={index}
-                            variants={itemVariants}
-                            whileHover={{ scale: 1.05, backgroundColor: 'hsl(var(--muted))' }}
-                            className="group text-center p-3 rounded-xl cursor-pointer transition-colors"
+                            onClick={() => action.href ? window.location.href = action.href : null}
+                            className="dashboard-item group text-center p-3 rounded-xl cursor-pointer transition-colors hover:bg-muted"
                         >
                             <IconWrapper
                                 icon={action.icon}
-                                className="mx-auto mb-2 bg-muted group-hover:bg-background"
+                                className="mx-auto mb-2 bg-muted group-hover:bg-background transition-colors"
                             />
                             <p className="text-sm font-medium">{action.title}</p>
                             <p className="text-xs text-muted-foreground">
                                 {action.description}
                             </p>
-                        </motion.div>
+                        </div>
                     ))}
-                </motion.div>
+                </div>
 
                 {/* Main Content Grid for Desktop */}
                 <div className="grid md:grid-cols-2 gap-6">
                     {/* Recent Activity */}
-                    <motion.div variants={itemVariants} className="mb-6 md:mb-0">
+                    <div className="dashboard-item mb-6 md:mb-0">
                         <div className="flex items-center gap-2 mb-4">
                             <History className="w-5 h-5 text-muted-foreground" />
                             <h2 className="text-sm font-semibold">Recent activity</h2>
                         </div>
-                        <motion.ul
-                            variants={containerVariants}
-                            className="space-y-4"
-                        >
+                        <ul className="space-y-4">
                             {recentActivity.map((activity, index) => (
-                                <motion.li
+                                <li
                                     key={index}
-                                    variants={itemVariants}
                                     className="flex items-center justify-between"
                                 >
                                     <div className="flex items-center gap-3">
@@ -191,31 +278,23 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                                         {activity.amount > 0 ? '+' : '-'}$
                                         {Math.abs(activity.amount).toFixed(2)}
                                     </div>
-                                </motion.li>
+                                </li>
                             ))}
-                        </motion.ul>
-                    </motion.div>
+                        </ul>
+                    </div>
 
                     {/* Financial Services */}
-                    <motion.div variants={itemVariants}>
+                    <div className="dashboard-item">
                         <div className="flex items-center gap-2 mb-4">
                             <Library className="w-5 h-5 text-muted-foreground" />
                             <h2 className="text-sm font-semibold">Financial services</h2>
                         </div>
-                        <motion.div
-                            variants={containerVariants}
-                            className="space-y-2"
-                        >
+                        <div className="space-y-2">
                             {financialServices.map((service, index) => (
-                                <motion.div
+                                <div
                                     key={index}
-                                    variants={itemVariants}
-                                    whileHover={{
-                                        scale: 1.02,
-                                        boxShadow: '0px 4px 10px hsla(var(--foreground), 0.05)',
-                                        backgroundColor: 'hsl(var(--muted))',
-                                    }}
-                                    className="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all"
+                                    onClick={() => service.href ? window.location.href = service.href : null}
+                                    className="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-sm hover:bg-muted"
                                 >
                                     <div className="flex items-center gap-3">
                                         <IconWrapper
@@ -239,12 +318,12 @@ export const FinancialDashboard: React.FC<FinancialDashboardProps> = ({
                                     {service.hasAction && (
                                         <ChevronRight className="w-5 h-5 text-muted-foreground" />
                                     )}
-                                </motion.div>
+                                </div>
                             ))}
-                        </motion.div>
-                    </motion.div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 };
