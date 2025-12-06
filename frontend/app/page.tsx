@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { FinancialDashboard } from '@/components/ui/financial-dashboard';
+import { TextEffect } from '@/components/ui/text-effect';
 
 // Import Lucide icons for the demo
 import {
@@ -94,7 +95,16 @@ const summaryData = {
 // --- DEMO COMPONENT ---
 export default function FinancialDashboardDemo() {
   return (
-    <div className="bg-background min-h-screen p-4 md:p-8 pt-20 md:pt-24">
+    <div className="bg-background min-h-screen p-4 md:p-8 pt-20 md:pt-24 flex flex-col items-center">
+      <div className="mb-8 text-center">
+        <TextEffect
+          per='char'
+          preset='fade'
+          className="text-sm font-medium tracking-widest text-[#00ff7f] uppercase"
+        >
+          AI Powered Financial Tracker
+        </TextEffect>
+      </div>
       <FinancialDashboard
         quickActions={quickActionsData}
         recentActivity={recentActivityData}

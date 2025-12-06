@@ -34,9 +34,9 @@ export function Navbar() {
     return (
         <>
             {/* Desktop Top Navigation */}
-            <nav className="hidden md:flex fixed top-0 w-full bg-background border-b z-50 px-6 py-3 items-center justify-between">
+            <nav className="hidden md:flex fixed top-0 w-full bg-[#00001c] border-b border-white/10 z-50 px-6 py-3 items-center justify-between text-white">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">
+                    <div className="w-8 h-8 rounded-full bg-[#00ff7f] flex items-center justify-center text-[#00001c] font-bold">
                         S
                     </div>
                     <span className="font-bold text-lg">SideDuit</span>
@@ -47,10 +47,10 @@ export function Navbar() {
                             key={item.href}
                             href={item.href}
                             className={cn(
-                                "text-sm font-medium transition-colors hover:text-primary",
+                                "text-sm font-medium transition-colors hover:text-[#00ff7f]",
                                 pathname === item.href
-                                    ? "text-primary"
-                                    : "text-muted-foreground"
+                                    ? "text-[#00ff7f]"
+                                    : "text-white/70"
                             )}
                         >
                             {item.name}
@@ -60,7 +60,7 @@ export function Navbar() {
             </nav>
 
             {/* Mobile Bottom Navigation */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 pb-safe">
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#00001c] border-t border-white/10 z-50 pb-safe text-white">
                 <div className="flex justify-around items-center h-16">
                     {navItems.map((item) => {
                         const Icon = item.icon;
@@ -71,7 +71,7 @@ export function Navbar() {
                                 href={item.href}
                                 className={cn(
                                     "flex flex-col items-center justify-center w-full h-full space-y-1",
-                                    isActive ? "text-primary" : "text-muted-foreground"
+                                    isActive ? "text-[#00ff7f]" : "text-white/70"
                                 )}
                             >
                                 <Icon className="w-5 h-5" />
