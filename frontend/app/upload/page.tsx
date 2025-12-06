@@ -6,6 +6,8 @@ import { useGSAP } from '@gsap/react';
 import { Upload, FileText, CheckCircle, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+
 export default function UploadPage() {
     const [dragActive, setDragActive] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
@@ -116,7 +118,7 @@ export default function UploadPage() {
         });
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/finance/upload/', {
+            const response = await fetch(`${API_BASE_URL}/finance/upload/`, {
                 method: 'POST',
                 body: formData,
             });

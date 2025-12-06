@@ -6,6 +6,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Loader2, Sparkles, Calculator, TrendingUp, DollarSign, Send, User, Bot, RefreshCw, ChevronRight } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+
 // --- Components ---
 
 const StatCard = ({ title, value, icon: Icon, subtext, delay }: { title: string, value: string, icon: any, subtext?: string, delay: number }) => (
@@ -117,7 +119,7 @@ export default function RetirementPage() {
         }
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/finance/retirement-advisor/', {
+            const response = await fetch(`${API_BASE_URL}/finance/retirement-advisor/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
