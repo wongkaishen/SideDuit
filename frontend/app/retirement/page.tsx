@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Loader2, Sparkles } from 'lucide-react';
 
 export default function RetirementPage() {
@@ -194,32 +194,56 @@ export default function RetirementPage() {
                             <h2 className="text-xl font-semibold mb-6">Savings Projection</h2>
                             <div className="h-[300px] w-full">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={projectionData}>
+                                    <AreaChart
+                                        data={projectionData}
+                                        margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
+                                    >
+                                        <defs>
+                                            <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
                                         <XAxis
                                             dataKey="age"
-                                            label={{ value: 'Age', position: 'insideBottom', offset: -5 }}
-                                            tick={{ fill: '#888' }}
+                                            label={{ value: 'Age', position: 'insideBottom', offset: -10, fill: '#666' }}
+                                            tick={{ fill: '#888', fontSize: 12 }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickMargin={10}
                                         />
                                         <YAxis
                                             tickFormatter={(value) => `RM${value / 1000}k`}
-                                            tick={{ fill: '#888' }}
+                                            tick={{ fill: '#888', fontSize: 12 }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickMargin={10}
                                         />
-                                        <Tooltip
-                                            formatter={(value: number) => [`RM ${value.toLocaleString()}`, "Balance"]}
-                                            contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}
-                                        />
-                                        <Legend />
-                                        <Line
+                                        <Tooltip content={({ active, payload, label }) => {
+                                            if (active && payload && payload.length) {
+                                                return (
+                                                    <div className="bg-card border border-border p-3 rounded-lg shadow-xl">
+                                                        <p className="text-muted-foreground text-xs mb-1">Age {label}</p>
+                                                        <p className="font-bold text-sm text-[#059669]">
+                                                            RM {Number(payload[0].value).toLocaleString()}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        }} />
+                                        <Legend verticalAlign="top" height={36} />
+                                        <Area
                                             type="monotone"
                                             dataKey="balance"
-                                            stroke="#00ff7f"
+                                            stroke="#059669"
                                             strokeWidth={3}
-                                            dot={false}
-                                            activeDot={{ r: 8 }}
+                                            fillOpacity={1}
+                                            fill="url(#colorBalance)"
                                             name="EPF Savings"
                                         />
-                                    </LineChart>
+                                    </AreaChart>
                                 </ResponsiveContainer>
                             </div>
                         </div>
@@ -260,8 +284,8 @@ export default function RetirementPage() {
                                                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                             >
                                                 <div className={`max-w-[85%] p-3 rounded-lg ${msg.role === 'user'
-                                                        ? 'bg-primary text-primary-foreground'
-                                                        : 'bg-muted/50 border border-white/10'
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'bg-muted/50 border border-white/10'
                                                     }`}>
                                                     <div className="prose prose-invert prose-sm max-w-none">
                                                         <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
